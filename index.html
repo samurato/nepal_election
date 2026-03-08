@@ -1159,7 +1159,7 @@ function renderPartyList() {
           </div>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;font-size:.65rem;color:#6b7280;gap:8px">
             <span>Vote share: <strong style="color:#93c5fd">${share}%</strong></span>
-            <span>Won+Leading: <strong style="color:#a78bfa">${Number(p.total || 0)}</strong></span>
+              <span>Won+Leading: <strong style="color:#22c55e">${Number(p.won || 0)}</strong> + <strong style="color:#f59e0b">${Number(p.leading || 0)}</strong></span>
           </div>
         </div>`;
     }).join("")
