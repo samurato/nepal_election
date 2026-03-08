@@ -1,10 +1,10 @@
 {
-  "updated_at": "2026-03-08T16:12:42Z",
+  "updated_at": "2026-03-08T16:14:54Z",
   "parties": [
     {
       "party": "राष्ट्रिय स्वतन्त्र पार्टी",
-      "won": 122,
-      "leading": 3,
+      "won": 123,
+      "leading": 2,
       "total": 125,
       "symbolId": 2528,
       "prVotes": 2994365
@@ -1038,6 +1038,17 @@
       "votes": 26145,
       "symbolId": 2528,
       "candidateId": 340512
+    },
+    {
+      "constituency_no": 1,
+      "constituency": "नं १",
+      "district": "नुवाकोट",
+      "province": "बागमती प्रदेश",
+      "candidate": "विक्रम तिमिल्सिना",
+      "party": "राष्ट्रिय स्वतन्त्र पार्टी",
+      "votes": 22609,
+      "symbolId": 2528,
+      "candidateId": 340093
     },
     {
       "constituency_no": 2,
