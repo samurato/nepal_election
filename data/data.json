@@ -1,10 +1,10 @@
 {
-  "updated_at": "2026-03-08T14:07:42Z",
+  "updated_at": "2026-03-08T14:11:33Z",
   "parties": [
     {
       "party": "राष्ट्रिय स्वतन्त्र पार्टी",
-      "won": 121,
-      "leading": 4,
+      "won": 122,
+      "leading": 3,
       "total": 125,
       "symbolId": 2528,
       "prVotes": 2699341
@@ -1313,6 +1313,17 @@
       "votes": 59277,
       "symbolId": 2528,
       "candidateId": 341145
+    },
+    {
+      "constituency_no": 2,
+      "constituency": "नं २",
+      "district": "गोरखा",
+      "province": "गण्डकी प्रदेश",
+      "candidate": "कविन्द्र बुर्लाकोटी",
+      "party": "राष्ट्रिय स्वतन्त्र पार्टी",
+      "votes": 26660,
+      "symbolId": 2528,
+      "candidateId": 339991
     },
     {
       "constituency_no": 1,
