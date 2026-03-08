@@ -140,6 +140,17 @@
         padding: 0.4rem 0.75rem !important;
         font-size: 0.65rem !important;
       }
+      
+      /* Politicians grid - force single column on mobile */
+      #politicians-grid {
+        grid-template-columns: 1fr !important;
+      }
+      
+      /* Politicians carousel controls */
+      #politicians-carousel-controls button {
+        padding: 0.4rem 0.75rem !important;
+        font-size: 0.65rem !important;
+      }
     }
 
     /* Seat Distribution Chart mobile responsive */
@@ -422,20 +433,35 @@
   <!-- Winners table -->
   <div class="bg-card border border-bdr rounded-lg overflow-hidden">
     <div class="px-4 py-3 border-b border-bdr">
-      <h2 class="text-sm font-semibold">Elected Candidates — विजयी उम्मेदवार</h2>
+      <h2 class="text-sm font-semibold">All Candidates — सबै उम्मेदवार</h2>
       <p id="winners-count" class="text-[0.7rem] text-gray-500 mt-0.5">Loading…</p>
     </div>
     <div class="p-4">
       <div class="flex gap-2.5 mb-3 flex-wrap">
         <input type="text" id="search" placeholder="Search in Nepali or English — e.g. 'Balen', 'RSP', 'Koshi'…" oninput="renderTable()"
           class="flex-1 min-w-[180px] bg-surface border border-bdr text-[#cdd0d6] rounded-md px-3 py-1.5 text-xs outline-none focus:border-blue-500" />
-        <select id="filter-province" onchange="renderTable()"
+        <select id="filter-province" onchange="handleProvinceChange()"
           class="bg-surface border border-bdr text-[#cdd0d6] rounded-md px-3 py-1.5 text-xs outline-none focus:border-blue-500">
           <option value="">All Provinces</option>
+        </select>
+        <select id="filter-district" onchange="handleDistrictChange()"
+          class="bg-surface border border-bdr text-[#cdd0d6] rounded-md px-3 py-1.5 text-xs outline-none focus:border-blue-500">
+          <option value="">All Districts</option>
+        </select>
+        <select id="filter-constituency-no" onchange="renderTable()"
+          class="bg-surface border border-bdr text-[#cdd0d6] rounded-md px-3 py-1.5 text-xs outline-none focus:border-blue-500 w-[140px]">
+          <option value="">All Constituencies</option>
         </select>
         <select id="filter-party" onchange="handlePartyFilterChange(this.value)"
           class="bg-surface border border-bdr text-[#cdd0d6] rounded-md px-3 py-1.5 text-xs outline-none focus:border-blue-500">
           <option value="">All Parties</option>
+        </select>
+        <select id="filter-status" onchange="renderTable()"
+          class="bg-surface border border-bdr text-[#cdd0d6] rounded-md px-3 py-1.5 text-xs outline-none focus:border-blue-500">
+          <option value="">All Status</option>
+          <option value="elected">Elected Only</option>
+          <option value="leading">Leading Only</option>
+          <option value="other">Others</option>
         </select>
         <select id="sort-col" onchange="renderTable()"
           class="bg-surface border border-bdr text-[#cdd0d6] rounded-md px-3 py-1.5 text-xs outline-none focus:border-blue-500">
@@ -455,11 +481,12 @@
               <th>Province</th>
               <th>Candidate</th>
               <th>Party</th>
+              <th>Status</th>
               <th>Votes</th>
             </tr>
           </thead>
           <tbody id="winners-tbody">
-            <tr><td colspan="7" class="text-center py-10 text-gray-500 text-sm">Fetching results…</td></tr>
+            <tr><td colspan="8" class="text-center py-10 text-gray-500 text-sm">Fetching results…</td></tr>
           </tbody>
         </table>
       </div>
@@ -483,6 +510,8 @@ function applyTheme(theme) {
   document.documentElement.setAttribute('data-theme', theme);
   document.getElementById('theme-toggle').textContent = theme === 'dark' ? '🌙' : '☀️';
   localStorage.setItem('theme', theme);
+  // Re-render map to update boundary colors
+  if (typeof renderMap === 'function') renderMap();
 }
 function toggleTheme() {
   const current = document.documentElement.getAttribute('data-theme');
@@ -756,6 +785,15 @@ let activePartyFilter = "";
 let constCarouselPage = 0;
 const CONST_CAROUSEL_SIZE = 25;
 let constSortMode = 'closest';
+
+// Responsive carousel sizes
+function getConstCarouselSize() {
+  return window.innerWidth <= 640 ? 4 : 25;
+}
+
+function getWatchlistSlideSize() {
+  return window.innerWidth <= 640 ? 2 : 8;
+}
 
 function changeConstCarouselPage(step) {
   constCarouselPage += step;
@@ -1213,30 +1251,115 @@ function renderChart() {
 //  Winners table
 // ════════════════════════════════════════════════════════════════════
 function populateFilters() {
-  const scopedWinners = getFilteredWinners();
-  const provinces = [...new Set(scopedWinners.map(w => w.province).filter(Boolean))].sort();
+  const scopedCandidates = getFilteredCandidates();
+  const provinces = [...new Set(scopedCandidates.map(c => c.province).filter(Boolean))].sort();
   const parties = [...new Set([
-    ...allWinners.map(w => w.party),
+    ...allCandidates.map(c => c.party),
     ...partyData.map(p => p.party),
   ].filter(Boolean))].sort();
 
   const pSel  = document.getElementById("filter-province");
   const ptSel = document.getElementById("filter-party");
-  const curP  = pSel.value;
-  const curPt = activePartyFilter || ptSel.value;
+  const curP  = pSel?.value;
+  const curPt = activePartyFilter || ptSel?.value;
 
-  pSel.innerHTML  = '<option value="">All Provinces</option>' +
-    provinces.map(v => `<option value="${v}"${v===curP?" selected":""}>${v}</option>`).join("");
-  ptSel.innerHTML = '<option value="">All Parties</option>' +
-    parties.map(v => `<option value="${v}"${v===curPt?" selected":""}>${v}</option>`).join("");
+  if (pSel) {
+    pSel.innerHTML  = '<option value="">All Provinces</option>' +
+      provinces.map(v => `<option value="${v}"${v===curP?" selected":""}>${v}</option>`).join("");
+  }
+  if (ptSel) {
+    ptSel.innerHTML = '<option value="">All Parties</option>' +
+      parties.map(v => `<option value="${v}"${v===curPt?" selected":""}>${v}</option>`).join("");
+  }
+  
+  // Initialize district and constituency filters
+  updateDistrictFilter();
+}
+
+function handleProvinceChange() {
+  updateDistrictFilter();
+  renderTable();
+}
+
+function handleDistrictChange() {
+  updateConstituencyFilter();
+  renderTable();
+}
+
+function updateDistrictFilter() {
+  const dSel = document.getElementById("filter-district");
+  const pSel = document.getElementById("filter-province");
+  if (!dSel) return;
+  
+  const selectedProvince = pSel?.value;
+  const curD = dSel.value;
+  
+  // Get all candidates (filtered by party if activePartyFilter is set)
+  let candidates = getFilteredCandidates();
+  
+  // Further filter by province if selected
+  if (selectedProvince) {
+    candidates = candidates.filter(c => c.province === selectedProvince);
+  }
+  
+  const districts = [...new Set(candidates.map(c => c.district).filter(Boolean))].sort();
+  
+  dSel.innerHTML = '<option value="">All Districts</option>' +
+    districts.map(v => `<option value="${v}"${v===curD?" selected":""}>${v}</option>`).join("");
+  
+  // If current district is not in the new list, reset it
+  if (curD && !districts.includes(curD)) {
+    dSel.value = "";
+  }
+  
+  updateConstituencyFilter();
+}
+
+function updateConstituencyFilter() {
+  const cSel = document.getElementById("filter-constituency-no");
+  const pSel = document.getElementById("filter-province");
+  const dSel = document.getElementById("filter-district");
+  if (!cSel) return;
+  
+  const selectedProvince = pSel?.value;
+  const selectedDistrict = dSel?.value;
+  const curC = cSel.value;
+  
+  // Get all candidates (filtered by party if activePartyFilter is set)
+  let candidates = getFilteredCandidates();
+  
+  // Further filter by province and/or district
+  if (selectedProvince) {
+    candidates = candidates.filter(c => c.province === selectedProvince);
+  }
+  if (selectedDistrict) {
+    candidates = candidates.filter(c => c.district === selectedDistrict);
+  }
+  
+  const constituencies = [...new Set(
+    candidates
+      .map(c => c.constituency_no)
+      .filter(v => v != null)
+  )].sort((a, b) => a - b);
+  
+  cSel.innerHTML = '<option value="">All Constituencies</option>' +
+    constituencies.map(v => `<option value="${v}"${v==curC?" selected":""}>Constituency ${v}</option>`).join("");
+  
+  // If current constituency is not in the new list, reset it
+  if (curC && !constituencies.includes(Number(curC))) {
+    cSel.value = "";
+  }
 }
 
 function renderTable() {
   const search   = document.getElementById("search").value.toLowerCase();
   const province = document.getElementById("filter-province").value;
+  const district = document.getElementById("filter-district").value;
+  const constNo  = document.getElementById("filter-constituency-no").value;
   const party    = activePartyFilter || document.getElementById("filter-party").value;
+  const status   = document.getElementById("filter-status").value;
   const sortKey  = document.getElementById("sort-col").value;
-  const scopedWinners = getFilteredWinners();
+  const scopedCandidates = getFilteredCandidates();
 
   // Expand query via aliases then transliterate for Roman→Nepali match
   let queryNepali = search;
@@ -1246,11 +1369,13 @@ function renderTable() {
   const queryRoman    = devToRoman(queryNepali);
   const queryPhonetic = phoneticNormalize(queryRoman || search);
 
-  let rows = scopedWinners.filter(w => {
-    if (province && w.province !== province) return false;
-    if (party    && w.party    !== party)    return false;
+  let rows = scopedCandidates.filter(c => {
+    if (province && c.province !== province) return false;
+    if (district && c.district !== district) return false;
+    if (constNo  && String(c.constituency_no) !== constNo) return false;
+    if (party    && c.party    !== party)    return false;
     if (search) {
-      const key = w._searchKey || buildSearchKey(w);
+      const key = c._searchKey || buildSearchKey(c);
       const matchNepali   = key.includes(queryNepali);
       const matchRoman    = queryRoman    && key.includes(queryRoman);
       const matchPhonetic = queryPhonetic.length > 1 && key.includes(queryPhonetic);
@@ -1259,6 +1384,36 @@ function renderTable() {
     return true;
   });
 
+  // Build winner set and leading map for status filtering
+  const winnerSet = new Set();
+  allWinners.forEach(w => {
+    const key = `${w.constituency_no}|${w.district}|${w.candidate}`;
+    winnerSet.add(key);
+  });
+
+  const leadingMap = {};
+  allCandidates.forEach(c => {
+    const constKey = constituencyKey(c);
+    if (!constKey) return;
+    if (!leadingMap[constKey] || (c.votes || 0) > (leadingMap[constKey].votes || 0)) {
+      leadingMap[constKey] = c;
+    }
+  });
+
+  // Filter by status if selected
+  if (status) {
+    rows = rows.filter(c => {
+      const isWinner = c.elected === true || winnerSet.has(`${c.constituency_no}|${c.district}|${c.candidate}`);
+      const constKey = constituencyKey(c);
+      const isLeading = !isWinner && constKey && leadingMap[constKey]?.candidate === c.candidate;
+      
+      if (status === 'elected') return isWinner;
+      if (status === 'leading') return isLeading;
+      if (status === 'other') return !isWinner && !isLeading;
+      return true;
+    });
+  }
+
   rows.sort((a, b) => {
     if (sortKey === "votes")     return (b.votes || 0) - (a.votes || 0);
     if (sortKey === "candidate") return (a.candidate || "").localeCompare(b.candidate || "");
@@ -1266,37 +1421,64 @@ function renderTable() {
     return (a.constituency_no || 0) - (b.constituency_no || 0);
   });
 
+  const filterSummary = [];
+  if (province) filterSummary.push(province);
+  if (district) filterSummary.push(district);
+  if (constNo) filterSummary.push(`Const. ${constNo}`);
+  if (activePartyFilter) filterSummary.push(activePartyFilter);
+  if (status) {
+    const statusLabels = { elected: 'Elected', leading: 'Leading', other: 'Others' };
+    filterSummary.push(statusLabels[status] || status);
+  }
+  const filterText = filterSummary.length ? ` · ${filterSummary.join(' · ')}` : '';
+
   document.getElementById("winners-count").textContent =
-    `${rows.length} of ${scopedWinners.length} elected candidates${activePartyFilter ? ` · ${activePartyFilter}` : ''}`;
+    `${rows.length} of ${scopedCandidates.length} candidates${filterText}`;
 
   const tbody = document.getElementById("winners-tbody");
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:#6b7280;font-size:.85rem">No matching results</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:40px;color:#6b7280;font-size:.85rem">No matching results</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = rows.map((w, i) => {
-    const color = partyColorMap[w.party] || "#64748b";
-    const votes = w.votes ? Number(w.votes).toLocaleString() : "—";
+  tbody.innerHTML = rows.map((c, i) => {
+    const color = partyColorMap[c.party] || "#64748b";
+    const votes = c.votes ? Number(c.votes).toLocaleString() : "—";
+    
+    // Determine status
+    const isWinner = c.elected === true || winnerSet.has(`${c.constituency_no}|${c.district}|${c.candidate}`);
+    const constKey = constituencyKey(c);
+    const isLeading = !isWinner && constKey && leadingMap[constKey]?.candidate === c.candidate;
+    
+    let statusBadge = '';
+    if (isWinner) {
+      statusBadge = '<span style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e55;padding:2px 7px;border-radius:10px;font-size:.62rem;font-weight:700;white-space:nowrap">✔ Won</span>';
+    } else if (isLeading) {
+      statusBadge = '<span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b55;padding:2px 7px;border-radius:10px;font-size:.62rem;font-weight:700;white-space:nowrap">▲ Leading</span>';
+    } else {
+      statusBadge = '<span style="color:#6b7280;font-size:.65rem">—</span>';
+    }
+    
     return `<tr>
       <td style="color:#6b7280">${i + 1}</td>
-      <td><strong>${w.constituency || "—"}</strong></td>
-      <td>${w.district || "—"}</td>
-      <td style="color:#a78bfa">${w.province || "—"}</td>
+      <td><strong>${c.constituency || "—"}</strong></td>
+      <td>${c.district || "—"}</td>
+      <td style="color:#a78bfa">${c.province || "—"}</td>
       <td>
         <div style="display:flex;align-items:center;gap:7px">
-          ${w.candidateId ? `<img style="width:32px;height:32px;border-radius:50%;object-fit:cover;background:var(--color-surface);flex-shrink:0;border:1px solid var(--color-bdr)" src="https://result.election.gov.np/Images/Candidate/${w.candidateId}.jpg" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}
-          <strong>${w.candidate || '—'}</strong>
+          ${c.candidateId ? `<img style="width:32px;height:32px;border-radius:50%;object-fit:cover;background:var(--color-surface);flex-shrink:0;border:1px solid var(--color-bdr)" src="https://result.election.gov.np/Images/Candidate/${c.candidateId}.jpg" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}
+          <strong>${c.candidate || '—'}</strong>
         </div>
       </td>
       <td>
         <div style="display:flex;align-items:center;gap:7px">
-          ${w.symbolId ? `<img style="width:28px;height:28px;border-radius:4px;object-fit:contain;background:rgba(255,255,255,.08);flex-shrink:0" src="https://result.election.gov.np/Images/symbol-hor-pa/${w.symbolId}.jpg" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}
+          ${c.symbolId ? `<img style="width:28px;height:28px;border-radius:4px;object-fit:contain;background:rgba(255,255,255,.08);flex-shrink:0" src="https://result.election.gov.np/Images/symbol-hor-pa/${c.symbolId}.jpg" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}
           <span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:.67rem;font-weight:600;white-space:nowrap;background:${color}22;color:${color};border:1px solid ${color}44">
-            ${w.party || '—'}
+            ${c.party || '—'}
           </span>
         </div>
       </td>
+      <td>${statusBadge}</td>
       <td style="font-variant-numeric:tabular-nums;color:#93c5fd;font-weight:600">${votes}</td>
     </tr>`;
   }).join("");
@@ -1398,12 +1580,13 @@ function renderConstituencyAnalytics() {
     return;
   }
 
-  const totalSlides = Math.max(1, Math.ceil(rows.length / CONST_CAROUSEL_SIZE));
+  const carouselSize = getConstCarouselSize();
+  const totalSlides = Math.max(1, Math.ceil(rows.length / carouselSize));
   if (constCarouselPage < 0) constCarouselPage = totalSlides - 1;
   if (constCarouselPage >= totalSlides) constCarouselPage = 0;
 
-  const start = constCarouselPage * CONST_CAROUSEL_SIZE;
-  const rowsToRender = rows.slice(start, start + CONST_CAROUSEL_SIZE);
+  const start = constCarouselPage * carouselSize;
+  const rowsToRender = rows.slice(start, start + carouselSize);
 
   cardsEl.style.transition = 'opacity .22s ease, transform .22s ease';
   cardsEl.style.opacity = '0';
@@ -1456,7 +1639,7 @@ function renderConstituencyAnalytics() {
   }).join('');
 
   if (controlsEl) {
-    if (rows.length > CONST_CAROUSEL_SIZE) {
+    if (rows.length > carouselSize) {
       controlsEl.classList.remove('hidden');
       controlsEl.innerHTML = `
         <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap">
@@ -1588,6 +1771,12 @@ async function renderMap() {
   const projection = d3.geoMercator().fitExtent([[6, 6], [W - 6, H - 6]], _nepalDistGeo);
   const pathGen    = d3.geoPath(projection);
 
+  // Get boundary stroke color based on theme
+  const getBoundaryStroke = () => {
+    const theme = document.documentElement.getAttribute('data-theme');
+    return theme === 'light' ? '#0b0f1a' : '#ffffff';
+  };
+
   // Floating tooltip
   let mapTip = document.getElementById('map-tooltip');
   if (!mapTip) {
@@ -1613,7 +1802,7 @@ async function renderMap() {
       return leader ? leader.color : '#1e3050';
     })
     .attr('fill-opacity', d => distLeader[d.properties.DISTRICT] ? 0.75 : 0.2)
-    .attr('stroke', '#0b0f1a')
+    .attr('stroke', getBoundaryStroke())
     .attr('stroke-width', 0.7)
     .style('cursor', 'pointer')
     .on('mousemove', function(event, d) {
@@ -1661,7 +1850,7 @@ async function renderMap() {
       const key = d.properties.DISTRICT;
       d3.select(this)
         .attr('fill-opacity', distLeader[key] ? 0.75 : 0.2)
-        .attr('stroke', '#0b0f1a')
+        .attr('stroke', getBoundaryStroke())
         .attr('stroke-width', 0.7);
       mapTip.style.display = 'none';
     });
@@ -1771,6 +1960,31 @@ function changeWatchlistPage(step) {
   polWatchPage += step;
   renderPoliticiansBox();
 }
+
+// Track previous sizes for resize detection
+let prevConstSize = getConstCarouselSize();
+let prevWatchSize = getWatchlistSlideSize();
+let resizeTimeout = null;
+
+// Reset carousel pages on window resize (debounced)
+window.addEventListener('resize', () => {
+  clearTimeout(resizeTimeout);
+  resizeTimeout = setTimeout(() => {
+    const newConstSize = getConstCarouselSize();
+    const newWatchSize = getWatchlistSlideSize();
+    
+    if (prevConstSize !== newConstSize) {
+      prevConstSize = newConstSize;
+      constCarouselPage = 0;
+      if (typeof renderConstituencyAnalytics === 'function') renderConstituencyAnalytics();
+    }
+    if (prevWatchSize !== newWatchSize) {
+      prevWatchSize = newWatchSize;
+      polWatchPage = 0;
+      if (typeof renderPoliticiansBox === 'function') renderPoliticiansBox();
+    }
+  }, 150);
+});
 
 function switchPolTab(tab) {
   polTab = tab;
@@ -2018,21 +2232,27 @@ function renderPoliticiansBox() {
       return (a._watchOrder || 0) - (b._watchOrder || 0);
     });
 
-    const totalSlides = Math.max(1, Math.ceil(cards.length / WATCHLIST_SLIDE_SIZE));
+    const slideSize = getWatchlistSlideSize();
+    const totalSlides = Math.max(1, Math.ceil(cards.length / slideSize));
     if (polWatchPage < 0) polWatchPage = totalSlides - 1;
     if (polWatchPage >= totalSlides) polWatchPage = 0;
 
-    const start = polWatchPage * WATCHLIST_SLIDE_SIZE;
-    cardsToRender = cards.slice(start, start + WATCHLIST_SLIDE_SIZE);
+    const start = polWatchPage * slideSize;
+    cardsToRender = cards.slice(start, start + slideSize);
 
     if (controls) {
-      controls.classList.remove('hidden');
-      controls.innerHTML = `
-        <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap">
-          <button onclick="changeWatchlistPage(-1)" class="px-2.5 py-1 rounded-md border text-[0.67rem] border-bdr text-gray-400 hover:bg-dim cursor-pointer">← Prev</button>
-          <span style="font-size:.68rem;color:#6b7280">Slide ${polWatchPage + 1} / ${totalSlides}</span>
-          <button onclick="changeWatchlistPage(1)" class="px-2.5 py-1 rounded-md border text-[0.67rem] border-bdr text-gray-400 hover:bg-dim cursor-pointer">Next →</button>
-        </div>`;
+      if (cards.length > slideSize) {
+        controls.classList.remove('hidden');
+        controls.innerHTML = `
+          <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap">
+            <button onclick="changeWatchlistPage(-1)" class="px-2.5 py-1 rounded-md border text-[0.67rem] border-bdr text-gray-400 hover:bg-dim cursor-pointer">← Prev</button>
+            <span style="font-size:.68rem;color:#6b7280">Slide ${polWatchPage + 1} / ${totalSlides}</span>
+            <button onclick="changeWatchlistPage(1)" class="px-2.5 py-1 rounded-md border text-[0.67rem] border-bdr text-gray-400 hover:bg-dim cursor-pointer">Next →</button>
+          </div>`;
+      } else {
+        controls.classList.add('hidden');
+        controls.innerHTML = '';
+      }
     }
   } else {
     const sorted = [...scopedWinners].sort((a, b) => (b.votes || 0) - (a.votes || 0)).slice(0, 12);
