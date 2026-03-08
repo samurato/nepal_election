@@ -31,8 +31,8 @@ jobs:
         with:
           # Use the built-in token so the push is authenticated.
           token: ${{ secrets.GITHUB_TOKEN }}
-          # Fetch minimal history — we only need to commit, not diff the full log.
-          fetch-depth: 1
+          # Full history keeps rebase/push-retry logic reliable when branch moves mid-run.
+          fetch-depth: 0
 
       # 2. Python runtime
       - name: Set up Python
@@ -111,6 +111,14 @@ jobs:
           # Retry after fetch+rebase to handle non-fast-forward safely.
           BRANCH="${GITHUB_REF_NAME}"
           REMOTE="origin"
+
+          # Sync once before first push attempt to reduce immediate non-fast-forward rejects.
+          git fetch "$REMOTE" "$BRANCH"
+          if ! git rebase "$REMOTE/$BRANCH"; then
+            git rebase --abort || true
+            echo "Initial rebase conflict while syncing with $REMOTE/$BRANCH"
+            exit 1
+          fi
 
           for attempt in 1 2 3; do
             if git push "$REMOTE" "HEAD:$BRANCH"; then
