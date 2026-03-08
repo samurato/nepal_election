@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-03-08T15:32:15Z",
+  "updated_at": "2026-03-08T15:34:27Z",
   "parties": [
     {
       "party": "राष्ट्रिय स्वतन्त्र पार्टी",
@@ -7,7 +7,7 @@
       "leading": 3,
       "total": 125,
       "symbolId": 2528,
-      "prVotes": 2889612
+      "prVotes": 2895493
     },
     {
       "party": "नेपाली काँग्रेस",
@@ -15,7 +15,7 @@
       "leading": 0,
       "total": 17,
       "symbolId": 2583,
-      "prVotes": 969890
+      "prVotes": 971656
     },
     {
       "party": "नेपाल कम्युनिष्ट पार्टी (एकीकृत मार्क्सवादी लेनिनवादी)",
@@ -23,7 +23,7 @@
       "leading": 2,
       "total": 10,
       "symbolId": 2598,
-      "prVotes": 838358
+      "prVotes": 839739
     },
     {
       "party": "नेपाली कम्युनिष्ट पार्टी",
@@ -31,7 +31,7 @@
       "leading": 0,
       "total": 7,
       "symbolId": 2557,
-      "prVotes": 404877
+      "prVotes": 405732
     },
     {
       "party": "श्रम संस्कृति पार्टी",
@@ -39,7 +39,7 @@
       "leading": 0,
       "total": 3,
       "symbolId": 2501,
-      "prVotes": 158608
+      "prVotes": 158625
     },
     {
       "party": "राष्ट्रिय प्रजातन्त्र पार्टी",
@@ -47,7 +47,7 @@
       "leading": 0,
       "total": 1,
       "symbolId": 2604,
-      "prVotes": 208388
+      "prVotes": 208591
     },
     {
       "party": "स्वतन्त्र",
@@ -62,87 +62,87 @@
     {
       "party": "राष्ट्रिय स्वतन्त्र पार्टी",
       "symbolId": 2528,
-      "prVotes": 2889612
+      "prVotes": 2895493
     },
     {
       "party": "नेपाली काँग्रेस",
       "symbolId": 2583,
-      "prVotes": 969890
+      "prVotes": 971656
     },
     {
       "party": "नेपाल कम्युनिष्ट पार्टी (एकीकृत मार्क्सवादी लेनिनवादी)",
       "symbolId": 2598,
-      "prVotes": 838358
+      "prVotes": 839739
     },
     {
       "party": "नेपाली कम्युनिष्ट पार्टी",
       "symbolId": 2557,
-      "prVotes": 404877
+      "prVotes": 405732
     },
     {
       "party": "राष्ट्रिय प्रजातन्त्र पार्टी",
       "symbolId": 2604,
-      "prVotes": 208388
+      "prVotes": 208591
     },
     {
       "party": "श्रम संस्कृति पार्टी",
       "symbolId": 2501,
-      "prVotes": 158608
+      "prVotes": 158625
     },
     {
       "party": "जनता समाजवादी पार्टी, नेपाल",
       "symbolId": 2542,
-      "prVotes": 76794
+      "prVotes": 77402
     },
     {
       "party": "राष्ट्रिय परिवर्तन पार्टी",
       "symbolId": 2568,
-      "prVotes": 67792
+      "prVotes": 67797
     },
     {
       "party": "नेपाल मजदुर किसान पार्टी",
       "symbolId": 2578,
-      "prVotes": 35123
+      "prVotes": 35156
     },
     {
       "party": "जनमत पार्टी",
       "symbolId": 2585,
-      "prVotes": 34387
+      "prVotes": 34437
     },
     {
       "party": "एकल चिन्ह चकिया (जाँतो) (राष्ट्रिय मुक्ति पार्टी नेपाल/जनता समाजवादी पार्टी/नागरिक उन्मुक्ति पार्टी, नेपाल)",
       "symbolId": 2531,
-      "prVotes": 28329
+      "prVotes": 28332
     },
     {
       "party": "राष्ट्रिय जनमोर्चा",
       "symbolId": 2522,
-      "prVotes": 19381
+      "prVotes": 19395
     },
     {
       "party": "राष्ट्र निर्माण दल नेपाल",
       "symbolId": 2527,
-      "prVotes": 18447
+      "prVotes": 18453
     },
     {
       "party": "नेपाल कम्युनिस्ट पार्टी (माओवादी)",
       "symbolId": 2526,
-      "prVotes": 15073
+      "prVotes": 15081
     },
     {
       "party": "नेपाल जनता संरक्षण पार्टी",
       "symbolId": 2541,
-      "prVotes": 14363
+      "prVotes": 14403
     },
     {
       "party": "प्रगतिशील लोकतान्त्रिक पार्टी",
       "symbolId": 2516,
-      "prVotes": 11688
+      "prVotes": 11695
     },
     {
       "party": "एकल चिन्ह  बस (नेपाल संघीय समाजवादी पार्टी/बहुजन एकता पार्टी नेपाल/नेपाल जनजागृति पार्टी)",
       "symbolId": 2567,
-      "prVotes": 10382
+      "prVotes": 10390
     },
     {
       "party": "मंगोल नेशनल अर्गनाइजेशन",
@@ -152,42 +152,42 @@
     {
       "party": "सार्वभौम नागरिक पार्टी",
       "symbolId": 2520,
-      "prVotes": 7940
+      "prVotes": 7971
     },
     {
       "party": "एकल चिन्ह मोबाइल (आम जनता पार्टी/जनादेश पार्टी नेपाल)",
       "symbolId": 2581,
-      "prVotes": 6147
+      "prVotes": 6179
     },
     {
       "party": "राष्ट्रिय मुक्ति आन्दोलन, नेपाल",
       "symbolId": 2591,
-      "prVotes": 5721
+      "prVotes": 5733
     },
     {
       "party": "संयुक्त नागरिक पार्टी",
       "symbolId": 2521,
-      "prVotes": 4789
+      "prVotes": 4791
     },
     {
       "party": "नेपाल जनता पार्टी",
       "symbolId": 2507,
-      "prVotes": 4055
+      "prVotes": 4058
     },
     {
       "party": "राष्ट्रिय एकता दल",
       "symbolId": 2548,
-      "prVotes": 3854
+      "prVotes": 3864
     },
     {
       "party": "नेपालका लागि नेपाली पार्टी",
       "symbolId": 2524,
-      "prVotes": 3413
+      "prVotes": 3419
     },
     {
       "party": "नेशनल रिपब्लिक नेपाल",
       "symbolId": 2504,
-      "prVotes": 3398
+      "prVotes": 3401
     },
     {
       "party": "राष्ट्रिय जनमुक्ति पार्टी",
@@ -197,32 +197,32 @@
     {
       "party": "नेपाल कम्युनिष्ट पार्टी (मार्क्सवादी-लेनिनवादी)",
       "symbolId": 2602,
-      "prVotes": 3060
+      "prVotes": 3064
     },
     {
       "party": "नेपाल कम्युनिष्ट पार्टी मार्क्सवादी (पुष्पलाल)",
       "symbolId": 2523,
-      "prVotes": 2977
+      "prVotes": 2982
     },
     {
       "party": "राष्ट्रिय गौरव पार्टी",
       "symbolId": 2558,
-      "prVotes": 2445
+      "prVotes": 2448
     },
     {
       "party": "नेपाल कम्युनिष्ट पार्टी (संयुक्त)",
       "symbolId": 2601,
-      "prVotes": 2343
+      "prVotes": 2346
     },
     {
       "party": "संघीय लोकतान्त्रिक राष्ट्रिय मञ्च",
       "symbolId": 2550,
-      "prVotes": 2320
+      "prVotes": 2322
     },
     {
       "party": "नेपाल लोकतान्त्रिक पार्टी",
       "symbolId": 2553,
-      "prVotes": 2003
+      "prVotes": 2004
     },
     {
       "party": "समावेशी समाजवादी पार्टी नेपाल",
@@ -232,7 +232,7 @@
     {
       "party": "गतिशील लोकतान्त्रिक पार्टी",
       "symbolId": 2571,
-      "prVotes": 1926
+      "prVotes": 1932
     },
     {
       "party": "नेपाल मातृभूमि पार्टी",
@@ -247,22 +247,27 @@
     {
       "party": "जय मातृभूमि पार्टी",
       "symbolId": 2510,
-      "prVotes": 1553
+      "prVotes": 1562
     },
     {
       "party": "राष्ट्रिय जनता पार्टी नेपाल",
       "symbolId": 2551,
-      "prVotes": 1496
+      "prVotes": 1498
     },
     {
       "party": "बहुजन शक्ति पार्टी",
       "symbolId": 2536,
-      "prVotes": 1411
+      "prVotes": 1415
     },
     {
       "party": "प्रजातान्त्रिक पार्टी नेपाल",
       "symbolId": 2582,
-      "prVotes": 1162
+      "prVotes": 1164
+    },
+    {
+      "party": "जन अधिकार पार्टी",
+      "symbolId": 2540,
+      "prVotes": 1159
     },
     {
       "party": "नेपाल जनमुक्ति पार्टी",
@@ -270,14 +275,9 @@
       "prVotes": 1148
     },
     {
-      "party": "जन अधिकार पार्टी",
-      "symbolId": 2540,
-      "prVotes": 1148
-    },
-    {
       "party": "पिपुल फर्ष्ट पार्टी",
       "symbolId": 2552,
-      "prVotes": 974
+      "prVotes": 976
     },
     {
       "party": "नेपाल सद्‍भावना पार्टी",
@@ -287,12 +287,12 @@
     {
       "party": "नागरिक शक्ति, नेपाल",
       "symbolId": 2549,
-      "prVotes": 890
+      "prVotes": 893
     },
     {
       "party": "नेपाली काँग्रेस (वी.पी.)",
       "symbolId": 2509,
-      "prVotes": 886
+      "prVotes": 888
     },
     {
       "party": "जनता लोकतान्त्रिक पार्टी, नेपाल",
@@ -302,7 +302,7 @@
     {
       "party": "नेपाली जनश्रमदान संस्कृति पार्टी",
       "symbolId": 2579,
-      "prVotes": 743
+      "prVotes": 745
     },
     {
       "party": "नेपाली जनता दल",
@@ -312,12 +312,12 @@
     {
       "party": "समावेशी समाजवादी पार्टी",
       "symbolId": 2590,
-      "prVotes": 726
+      "prVotes": 727
     },
     {
       "party": "स्वाभिमान पार्टी",
       "symbolId": 2569,
-      "prVotes": 652
+      "prVotes": 654
     },
     {
       "party": "एकल चिन्ह जगर भएको सिंह(सचेत नेपाली पार्टी/नागरिक सर्वोच्चता पार्टी नेपाल)",
@@ -327,12 +327,12 @@
     {
       "party": "जनप्रिय लोकतान्त्रिक पार्टी",
       "symbolId": 2564,
-      "prVotes": 464
+      "prVotes": 465
     },
     {
       "party": "मितेरी पार्टी नेपाल",
       "symbolId": 2530,
-      "prVotes": 423
+      "prVotes": 425
     },
     {
       "party": "उन्‍नत लोकतन्त्र पार्टी",
@@ -342,7 +342,7 @@
     {
       "party": "त्रिमुल नेपाल",
       "symbolId": 2505,
-      "prVotes": 349
+      "prVotes": 351
     }
   ],
   "winners": [
@@ -2703,6 +2703,20 @@
       "symbolId": 2528
     },
     {
+      "province": "बागमती प्रदेश",
+      "district": "नुवाकोट",
+      "constituency_no": "1",
+      "candidate": "विक्रम तिमिल्सिना",
+      "gender": "पुरुष",
+      "party": "राष्ट्रिय स्वतन्त्र पार्टी",
+      "symbol": "घण्टी",
+      "votes": 21745,
+      "elected": false,
+      "constituency": "नं १",
+      "candidateId": 340093,
+      "symbolId": 2528
+    },
+    {
       "province": "कर्णाली प्रदेश",
       "district": "रुकुम (पश्चिम भाग)",
       "constituency_no": "1",
@@ -2715,20 +2729,6 @@
       "constituency": "नं १",
       "candidateId": 340125,
       "symbolId": 2557
-    },
-    {
-      "province": "बागमती प्रदेश",
-      "district": "नुवाकोट",
-      "constituency_no": "1",
-      "candidate": "विक्रम तिमिल्सिना",
-      "gender": "पुरुष",
-      "party": "राष्ट्रिय स्वतन्त्र पार्टी",
-      "symbol": "घण्टी",
-      "votes": 21585,
-      "elected": false,
-      "constituency": "नं १",
-      "candidateId": 340093,
-      "symbolId": 2528
     },
     {
       "province": "गण्डकी प्रदेश",
@@ -2913,6 +2913,20 @@
       "symbolId": 2583
     },
     {
+      "province": "बागमती प्रदेश",
+      "district": "नुवाकोट",
+      "constituency_no": "1",
+      "candidate": "प्रकाश शरण महत",
+      "gender": "पुरुष",
+      "party": "नेपाली काँग्रेस",
+      "symbol": "रुख",
+      "votes": 18173,
+      "elected": false,
+      "constituency": "नं १",
+      "candidateId": 341419,
+      "symbolId": 2583
+    },
+    {
       "province": "कोशी प्रदेश",
       "district": "धनकुटा",
       "constituency_no": "1",
@@ -2925,20 +2939,6 @@
       "constituency": "नं १",
       "candidateId": 339725,
       "symbolId": 2598
-    },
-    {
-      "province": "बागमती प्रदेश",
-      "district": "नुवाकोट",
-      "constituency_no": "1",
-      "candidate": "प्रकाश शरण महत",
-      "gender": "पुरुष",
-      "party": "नेपाली काँग्रेस",
-      "symbol": "रुख",
-      "votes": 17836,
-      "elected": false,
-      "constituency": "नं १",
-      "candidateId": 341419,
-      "symbolId": 2583
     },
     {
       "province": "सुदूरपश्चिम प्रदेश",
@@ -3810,6 +3810,20 @@
     },
     {
       "province": "बागमती प्रदेश",
+      "district": "नुवाकोट",
+      "constituency_no": "1",
+      "candidate": "हित बहादुर तामाङ",
+      "gender": "पुरुष",
+      "party": "नेपाली कम्युनिष्ट पार्टी",
+      "symbol": "पाँचकुने तारा",
+      "votes": 13104,
+      "elected": false,
+      "constituency": "नं १",
+      "candidateId": 340293,
+      "symbolId": 2557
+    },
+    {
+      "province": "बागमती प्रदेश",
       "district": "दोलखा",
       "constituency_no": "1",
       "candidate": "विशाल खड्का",
@@ -3849,20 +3863,6 @@
       "constituency": "नं १",
       "candidateId": 340046,
       "symbolId": 2598
-    },
-    {
-      "province": "बागमती प्रदेश",
-      "district": "नुवाकोट",
-      "constituency_no": "1",
-      "candidate": "हित बहादुर तामाङ",
-      "gender": "पुरुष",
-      "party": "नेपाली कम्युनिष्ट पार्टी",
-      "symbol": "पाँचकुने तारा",
-      "votes": 13014,
-      "elected": false,
-      "constituency": "नं १",
-      "candidateId": 340293,
-      "symbolId": 2557
     },
     {
       "province": "सुदूरपश्चिम प्रदेश",
@@ -4789,6 +4789,20 @@
       "symbolId": 2501
     },
     {
+      "province": "बागमती प्रदेश",
+      "district": "नुवाकोट",
+      "constituency_no": "1",
+      "candidate": "बद्री मैनाली",
+      "gender": "पुरुष",
+      "party": "नेपाल कम्युनिष्ट पार्टी (एकीकृत मार्क्सवादी लेनिनवादी)",
+      "symbol": "सुर्य",
+      "votes": 8714,
+      "elected": false,
+      "constituency": "नं १",
+      "candidateId": 340914,
+      "symbolId": 2598
+    },
+    {
       "province": "कोशी प्रदेश",
       "district": "इलाम",
       "constituency_no": "1",
@@ -4828,20 +4842,6 @@
       "elected": false,
       "constituency": "नं १",
       "candidateId": 340240,
-      "symbolId": 2598
-    },
-    {
-      "province": "बागमती प्रदेश",
-      "district": "नुवाकोट",
-      "constituency_no": "1",
-      "candidate": "बद्री मैनाली",
-      "gender": "पुरुष",
-      "party": "नेपाल कम्युनिष्ट पार्टी (एकीकृत मार्क्सवादी लेनिनवादी)",
-      "symbol": "सुर्य",
-      "votes": 8633,
-      "elected": false,
-      "constituency": "नं १",
-      "candidateId": 340914,
       "symbolId": 2598
     },
     {
@@ -5209,6 +5209,20 @@
       "symbolId": 2566
     },
     {
+      "province": "कोशी प्रदेश",
+      "district": "संखुवासभा",
+      "constituency_no": "1",
+      "candidate": "अर्जुन कुमार कार्की",
+      "gender": "पुरुष",
+      "party": "नेपाल कम्युनिष्ट पार्टी (एकीकृत मार्क्सवादी लेनिनवादी)",
+      "symbol": "सुर्य",
+      "votes": 7183,
+      "elected": false,
+      "constituency": "नं १",
+      "candidateId": 340348,
+      "symbolId": 2598
+    },
+    {
       "province": "कर्णाली प्रदेश",
       "district": "जुम्ला",
       "constituency_no": "1",
@@ -5221,20 +5235,6 @@
       "constituency": "नं १",
       "candidateId": 341715,
       "symbolId": 2583
-    },
-    {
-      "province": "कोशी प्रदेश",
-      "district": "संखुवासभा",
-      "constituency_no": "1",
-      "candidate": "अर्जुन कुमार कार्की",
-      "gender": "पुरुष",
-      "party": "नेपाल कम्युनिष्ट पार्टी (एकीकृत मार्क्सवादी लेनिनवादी)",
-      "symbol": "सुर्य",
-      "votes": 7038,
-      "elected": false,
-      "constituency": "नं १",
-      "candidateId": 340348,
-      "symbolId": 2598
     },
     {
       "province": "मधेश प्रदेश",
@@ -5335,6 +5335,20 @@
       "symbolId": 2557
     },
     {
+      "province": "कोशी प्रदेश",
+      "district": "संखुवासभा",
+      "constituency_no": "1",
+      "candidate": "मिङमा शेर्पा",
+      "gender": "पुरुष",
+      "party": "राष्ट्रिय स्वतन्त्र पार्टी",
+      "symbol": "घण्टी",
+      "votes": 6735,
+      "elected": false,
+      "constituency": "नं १",
+      "candidateId": 340114,
+      "symbolId": 2528
+    },
+    {
       "province": "कर्णाली प्रदेश",
       "district": "मुगु",
       "constituency_no": "1",
@@ -5375,20 +5389,6 @@
       "constituency": "नं १",
       "candidateId": 339924,
       "symbolId": 2598
-    },
-    {
-      "province": "कोशी प्रदेश",
-      "district": "संखुवासभा",
-      "constituency_no": "1",
-      "candidate": "मिङमा शेर्पा",
-      "gender": "पुरुष",
-      "party": "राष्ट्रिय स्वतन्त्र पार्टी",
-      "symbol": "घण्टी",
-      "votes": 6582,
-      "elected": false,
-      "constituency": "नं १",
-      "candidateId": 340114,
-      "symbolId": 2528
     },
     {
       "province": "बागमती प्रदेश",
@@ -5853,6 +5853,20 @@
       "symbolId": 2598
     },
     {
+      "province": "कोशी प्रदेश",
+      "district": "संखुवासभा",
+      "constituency_no": "1",
+      "candidate": "दिपन कुमार श्रेष्ठ",
+      "gender": "पुरुष",
+      "party": "नेपाली काँग्रेस",
+      "symbol": "रुख",
+      "votes": 4413,
+      "elected": false,
+      "constituency": "नं १",
+      "candidateId": 340661,
+      "symbolId": 2583
+    },
+    {
       "province": "कर्णाली प्रदेश",
       "district": "हुम्ला",
       "constituency_no": "1",
@@ -5907,20 +5921,6 @@
       "constituency": "नं १",
       "candidateId": 340066,
       "symbolId": 2528
-    },
-    {
-      "province": "कोशी प्रदेश",
-      "district": "संखुवासभा",
-      "constituency_no": "1",
-      "candidate": "दिपन कुमार श्रेष्ठ",
-      "gender": "पुरुष",
-      "party": "नेपाली काँग्रेस",
-      "symbol": "रुख",
-      "votes": 4182,
-      "elected": false,
-      "constituency": "नं १",
-      "candidateId": 340661,
-      "symbolId": 2583
     },
     {
       "province": "कोशी प्रदेश",
@@ -6064,6 +6064,20 @@
     },
     {
       "province": "कोशी प्रदेश",
+      "district": "संखुवासभा",
+      "constituency_no": "1",
+      "candidate": "उमा कुमारी राई",
+      "gender": "महिला",
+      "party": "श्रम संस्कृति पार्टी",
+      "symbol": "अँजुलीमा रहेको माटो",
+      "votes": 3656,
+      "elected": false,
+      "constituency": "नं १",
+      "candidateId": 339989,
+      "symbolId": 2501
+    },
+    {
+      "province": "कोशी प्रदेश",
       "district": "सोलुखुम्बु",
       "constituency_no": "1",
       "candidate": "ऋषि धन थुलुङराई",
@@ -6144,20 +6158,6 @@
       "elected": false,
       "constituency": "नं १",
       "candidateId": 340116,
-      "symbolId": 2501
-    },
-    {
-      "province": "कोशी प्रदेश",
-      "district": "संखुवासभा",
-      "constituency_no": "1",
-      "candidate": "उमा कुमारी राई",
-      "gender": "महिला",
-      "party": "श्रम संस्कृति पार्टी",
-      "symbol": "अँजुलीमा रहेको माटो",
-      "votes": 3348,
-      "elected": false,
-      "constituency": "नं १",
-      "candidateId": 339989,
       "symbolId": 2501
     },
     {
@@ -7155,6 +7155,20 @@
       "symbolId": 2501
     },
     {
+      "province": "कोशी प्रदेश",
+      "district": "संखुवासभा",
+      "constituency_no": "1",
+      "candidate": "सरिता थापा",
+      "gender": "महिला",
+      "party": "नेपाली कम्युनिष्ट पार्टी",
+      "symbol": "पाँचकुने तारा",
+      "votes": 1096,
+      "elected": false,
+      "constituency": "नं १",
+      "candidateId": 341044,
+      "symbolId": 2557
+    },
+    {
       "province": "लुम्बिनी प्रदेश",
       "district": "दाङ",
       "constituency_no": "1",
@@ -7279,20 +7293,6 @@
       "constituency": "नं १",
       "candidateId": 340075,
       "symbolId": 2604
-    },
-    {
-      "province": "कोशी प्रदेश",
-      "district": "संखुवासभा",
-      "constituency_no": "1",
-      "candidate": "सरिता थापा",
-      "gender": "महिला",
-      "party": "नेपाली कम्युनिष्ट पार्टी",
-      "symbol": "पाँचकुने तारा",
-      "votes": 980,
-      "elected": false,
-      "constituency": "नं १",
-      "candidateId": 341044,
-      "symbolId": 2557
     },
     {
       "province": "गण्डकी प्रदेश",
@@ -8856,7 +8856,7 @@
       "gender": "पुरुष",
       "party": "राष्ट्रिय परिवर्तन पार्टी",
       "symbol": "बाँसुरी",
-      "votes": 363,
+      "votes": 365,
       "elected": false,
       "constituency": "नं १",
       "candidateId": 341337,
@@ -9452,6 +9452,20 @@
     },
     {
       "province": "बागमती प्रदेश",
+      "district": "नुवाकोट",
+      "constituency_no": "1",
+      "candidate": "दावा फेन्‍जु लामा / तामाङ",
+      "gender": "पुरुष",
+      "party": "श्रम संस्कृति पार्टी",
+      "symbol": "अँजुलीमा रहेको माटो",
+      "votes": 278,
+      "elected": false,
+      "constituency": "नं १",
+      "candidateId": 340790,
+      "symbolId": 2501
+    },
+    {
+      "province": "बागमती प्रदेश",
       "district": "धादिङ",
       "constituency_no": "1",
       "candidate": "श्‍यामराजा पाण्डे",
@@ -9463,20 +9477,6 @@
       "constituency": "नं १",
       "candidateId": 341172,
       "symbolId": 2566
-    },
-    {
-      "province": "बागमती प्रदेश",
-      "district": "नुवाकोट",
-      "constituency_no": "1",
-      "candidate": "दावा फेन्‍जु लामा / तामाङ",
-      "gender": "पुरुष",
-      "party": "श्रम संस्कृति पार्टी",
-      "symbol": "अँजुलीमा रहेको माटो",
-      "votes": 274,
-      "elected": false,
-      "constituency": "नं १",
-      "candidateId": 340790,
-      "symbolId": 2501
     },
     {
       "province": "लुम्बिनी प्रदेश",
@@ -10767,6 +10767,20 @@
       "symbolId": 2640
     },
     {
+      "province": "बागमती प्रदेश",
+      "district": "नुवाकोट",
+      "constituency_no": "1",
+      "candidate": "कुमार राना मगर",
+      "gender": "पुरुष",
+      "party": "मंगोल नेशनल अर्गनाइजेसन",
+      "symbol": "कुखुराको भाले",
+      "votes": 159,
+      "elected": false,
+      "constituency": "नं १",
+      "candidateId": 340490,
+      "symbolId": 2511
+    },
+    {
       "province": "कोशी प्रदेश",
       "district": "सोलुखुम्बु",
       "constituency_no": "1",
@@ -10793,20 +10807,6 @@
       "constituency": "नं १",
       "candidateId": 341546,
       "symbolId": 2501
-    },
-    {
-      "province": "बागमती प्रदेश",
-      "district": "नुवाकोट",
-      "constituency_no": "1",
-      "candidate": "कुमार राना मगर",
-      "gender": "पुरुष",
-      "party": "मंगोल नेशनल अर्गनाइजेसन",
-      "symbol": "कुखुराको भाले",
-      "votes": 157,
-      "elected": false,
-      "constituency": "नं १",
-      "candidateId": 340490,
-      "symbolId": 2511
     },
     {
       "province": "बागमती प्रदेश",
@@ -10872,7 +10872,7 @@
       "gender": "पुरुष",
       "party": "नेपाल कम्युनिस्ट पार्टी (माओवादी)",
       "symbol": "गोलो घेराभित्र दुई पात भएको गुलाफको फूल",
-      "votes": 151,
+      "votes": 153,
       "elected": false,
       "constituency": "नं १",
       "candidateId": 340245,
@@ -11006,6 +11006,20 @@
     },
     {
       "province": "कोशी प्रदेश",
+      "district": "संखुवासभा",
+      "constituency_no": "1",
+      "candidate": "पुष्प कोईराला",
+      "gender": "पुरुष",
+      "party": "नेपाल कम्युनिस्ट पार्टी (माओवादी)",
+      "symbol": "गोलो घेराभित्र दुई पात भएको गुलाफको फूल",
+      "votes": 143,
+      "elected": false,
+      "constituency": "नं १",
+      "candidateId": 339647,
+      "symbolId": 2526
+    },
+    {
+      "province": "कोशी प्रदेश",
       "district": "ताप्लेजुङ",
       "constituency_no": "1",
       "candidate": "अरुन सुब्बा (लेछर्वो)",
@@ -11059,20 +11073,6 @@
       "constituency": "नं १",
       "candidateId": 341398,
       "symbolId": 2608
-    },
-    {
-      "province": "कोशी प्रदेश",
-      "district": "संखुवासभा",
-      "constituency_no": "1",
-      "candidate": "पुष्प कोईराला",
-      "gender": "पुरुष",
-      "party": "नेपाल कम्युनिस्ट पार्टी (माओवादी)",
-      "symbol": "गोलो घेराभित्र दुई पात भएको गुलाफको फूल",
-      "votes": 139,
-      "elected": false,
-      "constituency": "नं १",
-      "candidateId": 339647,
-      "symbolId": 2526
     },
     {
       "province": "कोशी प्रदेश",
@@ -12210,6 +12210,20 @@
     },
     {
       "province": "बागमती प्रदेश",
+      "district": "नुवाकोट",
+      "constituency_no": "1",
+      "candidate": "राजन गौतम",
+      "gender": "पुरुष",
+      "party": "प्रगतिशील लोकतान्त्रिक पार्टी",
+      "symbol": "खुलेको एकल आँखा",
+      "votes": 88,
+      "elected": false,
+      "constituency": "नं १",
+      "candidateId": 339980,
+      "symbolId": 2516
+    },
+    {
+      "province": "बागमती प्रदेश",
       "district": "चितवन",
       "constituency_no": "1",
       "candidate": "गणेश बहादुर श्रेष्ठ",
@@ -12249,20 +12263,6 @@
       "constituency": "नं १",
       "candidateId": 341006,
       "symbolId": 2581
-    },
-    {
-      "province": "बागमती प्रदेश",
-      "district": "नुवाकोट",
-      "constituency_no": "1",
-      "candidate": "राजन गौतम",
-      "gender": "पुरुष",
-      "party": "प्रगतिशील लोकतान्त्रिक पार्टी",
-      "symbol": "खुलेको एकल आँखा",
-      "votes": 86,
-      "elected": false,
-      "constituency": "नं १",
-      "candidateId": 339980,
-      "symbolId": 2516
     },
     {
       "province": "सुदूरपश्चिम प्रदेश",
@@ -14268,6 +14268,20 @@
     },
     {
       "province": "कोशी प्रदेश",
+      "district": "संखुवासभा",
+      "constituency_no": "1",
+      "candidate": "भरत कुमार राई (याक्खा)",
+      "gender": "पुरुष",
+      "party": "जनता समाजवादी पार्टी, नेपाल",
+      "symbol": "ढल्केको छाता",
+      "votes": 42,
+      "elected": false,
+      "constituency": "नं १",
+      "candidateId": 340520,
+      "symbolId": 2542
+    },
+    {
+      "province": "कोशी प्रदेश",
       "district": "तेह्रथुम",
       "constituency_no": "1",
       "candidate": "गंगा वहादुर चोङवाङ् लिम्बु",
@@ -14685,20 +14699,6 @@
       "constituency": "नं १",
       "candidateId": 342130,
       "symbolId": 2516
-    },
-    {
-      "province": "कोशी प्रदेश",
-      "district": "संखुवासभा",
-      "constituency_no": "1",
-      "candidate": "भरत कुमार राई (याक्खा)",
-      "gender": "पुरुष",
-      "party": "जनता समाजवादी पार्टी, नेपाल",
-      "symbol": "ढल्केको छाता",
-      "votes": 37,
-      "elected": false,
-      "constituency": "नं १",
-      "candidateId": 340520,
-      "symbolId": 2542
     },
     {
       "province": "कोशी प्रदेश",
@@ -15500,6 +15500,20 @@
     },
     {
       "province": "कोशी प्रदेश",
+      "district": "संखुवासभा",
+      "constituency_no": "1",
+      "candidate": "देवेन्द्र कुमार (रिल्ली) घले",
+      "gender": "पुरुष",
+      "party": "मंगोल नेशनल अर्गनाइजेसन",
+      "symbol": "कुखुराको भाले",
+      "votes": 27,
+      "elected": false,
+      "constituency": "नं १",
+      "candidateId": 339449,
+      "symbolId": 2511
+    },
+    {
+      "province": "कोशी प्रदेश",
       "district": "सुनसरी",
       "constituency_no": "1",
       "candidate": "याम बहादुर लिम्बु",
@@ -15623,20 +15637,6 @@
       "constituency": "नं १",
       "candidateId": 339413,
       "symbolId": 2581
-    },
-    {
-      "province": "कोशी प्रदेश",
-      "district": "संखुवासभा",
-      "constituency_no": "1",
-      "candidate": "देवेन्द्र कुमार (रिल्ली) घले",
-      "gender": "पुरुष",
-      "party": "मंगोल नेशनल अर्गनाइजेसन",
-      "symbol": "कुखुराको भाले",
-      "votes": 26,
-      "elected": false,
-      "constituency": "नं १",
-      "candidateId": 339449,
-      "symbolId": 2511
     },
     {
       "province": "कोशी प्रदेश",
@@ -18033,6 +18033,20 @@
       "symbolId": 2511
     },
     {
+      "province": "कोशी प्रदेश",
+      "district": "संखुवासभा",
+      "constituency_no": "1",
+      "candidate": "केशर सिं राई",
+      "gender": "पुरुष",
+      "party": "नेपाल जनमुक्ति पार्टी",
+      "symbol": "घर",
+      "votes": 8,
+      "elected": false,
+      "constituency": "नं १",
+      "candidateId": 340791,
+      "symbolId": 2529
+    },
+    {
       "province": "मधेश प्रदेश",
       "district": "सप्तरी",
       "constituency_no": "1",
@@ -18232,15 +18246,15 @@
       "province": "कोशी प्रदेश",
       "district": "संखुवासभा",
       "constituency_no": "1",
-      "candidate": "केशर सिं राई",
-      "gender": "पुरुष",
-      "party": "नेपाल जनमुक्ति पार्टी",
-      "symbol": "घर",
+      "candidate": "रन माया राई(चाम्लिङ्ग)",
+      "gender": "महिला",
+      "party": "संघीय लोकतान्त्रिक राष्ट्रिय मञ्च",
+      "symbol": "दाप सहितको खुकुरी",
       "votes": 7,
       "elected": false,
       "constituency": "नं १",
-      "candidateId": 340791,
-      "symbolId": 2529
+      "candidateId": 340947,
+      "symbolId": 2550
     },
     {
       "province": "मधेश प्रदेश",
@@ -18591,20 +18605,6 @@
       "constituency": "नं १",
       "candidateId": 342726,
       "symbolId": 2670
-    },
-    {
-      "province": "कोशी प्रदेश",
-      "district": "संखुवासभा",
-      "constituency_no": "1",
-      "candidate": "रन माया राई(चाम्लिङ्ग)",
-      "gender": "महिला",
-      "party": "संघीय लोकतान्त्रिक राष्ट्रिय मञ्च",
-      "symbol": "दाप सहितको खुकुरी",
-      "votes": 5,
-      "elected": false,
-      "constituency": "नं १",
-      "candidateId": 340947,
-      "symbolId": 2550
     },
     {
       "province": "मधेश प्रदेश",
