@@ -51,15 +51,23 @@ jobs:
       - name: Fetch election data loop
         id: fetch
         env:
-          BATCH_RUNS: "6"
+          BATCH_RUNS: "5"
           INTERVAL_SECONDS: "120"
         run: |
           set +e
+
+          # Configure git once before the loop
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
 
           total_runs=0
           changed_runs=0
           unchanged_runs=0
           failed_runs=0
+          commits_pushed=0
+
+          BRANCH="${GITHUB_REF_NAME}"
+          REMOTE="origin"
 
           for i in $(seq 1 "$BATCH_RUNS"); do
             echo "Starting fetch run $i/$BATCH_RUNS"
@@ -74,6 +82,42 @@ jobs:
               *) failed_runs=$((failed_runs + 1)) ;;
             esac
 
+            # Commit and push if data changed
+            if [ "$CODE" = "0" ]; then
+              if ! git diff --quiet -- data/; then
+                echo "Data changed, committing..."
+                git add data/
+                git commit -m "data: update election results [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+
+                # Push with retry logic
+                PUSHED=false
+                for attempt in 1 2 3; do
+                  if git push "$REMOTE" "HEAD:$BRANCH"; then
+                    echo "Push succeeded on attempt $attempt"
+                    commits_pushed=$((commits_pushed + 1))
+                    PUSHED=true
+                    break
+                  fi
+
+                  echo "Push failed on attempt $attempt; fetching + rebasing and retrying..."
+                  git fetch "$REMOTE" "$BRANCH"
+                  if ! git rebase "$REMOTE/$BRANCH"; then
+                    git rebase --abort || true
+                    echo "Rebase conflict while syncing with $REMOTE/$BRANCH"
+                    break
+                  fi
+
+                  sleep $((attempt * 2))
+                done
+
+                if [ "$PUSHED" = "false" ]; then
+                  echo "Warning: Failed to push commit after 3 attempts"
+                fi
+              else
+                echo "Fetch returned success but no file changes detected"
+              fi
+            fi
+
             if [ "$i" -lt "$BATCH_RUNS" ]; then
               echo "Sleeping ${INTERVAL_SECONDS}s before next fetch run..."
               sleep "$INTERVAL_SECONDS"
@@ -86,6 +130,7 @@ jobs:
           echo "changed_runs=$changed_runs" >> "$GITHUB_OUTPUT"
           echo "unchanged_runs=$unchanged_runs" >> "$GITHUB_OUTPUT"
           echo "failed_runs=$failed_runs" >> "$GITHUB_OUTPUT"
+          echo "commits_pushed=$commits_pushed" >> "$GITHUB_OUTPUT"
 
           if [ "$failed_runs" -eq "$total_runs" ]; then
             echo "status=failed" >> "$GITHUB_OUTPUT"
@@ -98,46 +143,7 @@ jobs:
             echo "status=partial" >> "$GITHUB_OUTPUT"
           fi
 
-      # 5. Commit + push ONLY when files actually changed
-      - name: Commit updated data
-        if: steps.fetch.outputs.status != 'failed'
-        run: |
-          if git diff --quiet -- data/; then
-            echo "No data changes to commit."
-            exit 0
-          fi
-
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/
-          git commit -m "data: update election results [$(date -u '+%Y-%m-%d %H:%M UTC')]"
-
-          # Push can fail if the branch moved while this job was running.
-          # Retry after fetch+rebase to handle non-fast-forward safely.
-          BRANCH="${GITHUB_REF_NAME}"
-          REMOTE="origin"
-
-          for attempt in 1 2 3; do
-            if git push "$REMOTE" "HEAD:$BRANCH"; then
-              echo "Push succeeded on attempt $attempt"
-              exit 0
-            fi
-
-            echo "Push failed on attempt $attempt; fetching + rebasing and retrying..."
-            git fetch "$REMOTE" "$BRANCH"
-            if ! git rebase "$REMOTE/$BRANCH"; then
-              git rebase --abort || true
-              echo "Rebase conflict while syncing with $REMOTE/$BRANCH"
-              exit 1
-            fi
-
-            sleep $((attempt * 2))
-          done
-
-          echo "Push failed after 3 attempts."
-          exit 1
-
-      # 6. Human-readable summary in the Actions log
+      # 5. Human-readable summary in the Actions log
       - name: Summary
         if: always()
         run: |
@@ -146,11 +152,13 @@ jobs:
           CHANGED_RUNS="${{ steps.fetch.outputs.changed_runs }}"
           UNCHANGED_RUNS="${{ steps.fetch.outputs.unchanged_runs }}"
           FAILED_RUNS="${{ steps.fetch.outputs.failed_runs }}"
+          COMMITS_PUSHED="${{ steps.fetch.outputs.commits_pushed }}"
 
           echo "- total runs: ${TOTAL_RUNS:-n/a}" >> "$GITHUB_STEP_SUMMARY"
           echo "- changed runs: ${CHANGED_RUNS:-n/a}" >> "$GITHUB_STEP_SUMMARY"
           echo "- unchanged runs: ${UNCHANGED_RUNS:-n/a}" >> "$GITHUB_STEP_SUMMARY"
           echo "- failed runs: ${FAILED_RUNS:-n/a}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- commits pushed: ${COMMITS_PUSHED:-n/a}" >> "$GITHUB_STEP_SUMMARY"
 
           case "$STATUS" in
             changed)   echo "### ✅ data.json updated and pushed to GitHub Pages" ;;
