@@ -1,0 +1,1546 @@
+<!DOCTYPE html>
+<html lang="ne" data-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lila Election Tracker — Nepal 2082</title>
+  <link rel="icon" type="image/png" href="/public/logo.png" />
+  <!-- Prevent flash of wrong theme by applying preference before first paint -->
+  <script>
+    (function(){
+      var t = localStorage.getItem('theme') ||
+              (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+      document.documentElement.setAttribute('data-theme', t);
+    })();
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            app:     'var(--color-app)',
+            surface: 'var(--color-surface)',
+            card:    'var(--color-card)',
+            dim:     'var(--color-dim)',
+            bdr:     'var(--color-bdr)',
+          },
+        },
+      },
+    }
+  </script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/d3@7/dist/d3.min.js"></script>
+  <style>
+    /* ── Theme variables ──────────────────────────────────────────── */
+    :root,
+    [data-theme="dark"] {
+      --color-app:          #0f1117;
+      --color-surface:      #161b22;
+      --color-card:         #1c2128;
+      --color-dim:          #21262d;
+      --color-bdr:          #2d333b;
+      --color-text:         #cdd0d6;
+      --color-text-muted:   #6b7280;
+      --color-text-hover:   #cdd0d6;
+      --color-input-bg:     #161b22;
+      --color-skeleton:     #21262d;
+      --color-toast-bg:     #161b22;
+    }
+    [data-theme="light"] {
+      --color-app:          #f1f5f9;
+      --color-surface:      #ffffff;
+      --color-card:         #f8fafc;
+      --color-dim:          #e2e8f0;
+      --color-bdr:          #cbd5e1;
+      --color-text:         #1e293b;
+      --color-text-muted:   #64748b;
+      --color-text-hover:   #0f172a;
+      --color-input-bg:     #ffffff;
+      --color-skeleton:     #e2e8f0;
+      --color-toast-bg:     #ffffff;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--color-app);
+      color: var(--color-text);
+      font-family: 'Inter','Segoe UI',system-ui,sans-serif;
+      min-height: 100vh;
+      transition: background-color .25s, color .25s;
+    }
+
+    /* Progress bar */
+    #progress-bar { position:fixed;top:0;left:0;height:2px;z-index:1000;background:#3b82f6;width:0%;transition:width 1.2s ease; }
+
+    /* Animations */
+    @keyframes blink    { 0%,100%{opacity:1} 50%{opacity:.3} }
+    @keyframes pulse-sk { 0%,100%{opacity:1} 50%{opacity:.5} }
+    @keyframes popUp    { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:none} }
+    .status-loading { animation: blink .8s infinite; }
+    .skeleton { background:var(--color-skeleton);border-radius:4px;animation:pulse-sk 1.8s ease-in-out infinite; }
+    #toast { animation: popUp .25s; }
+
+    /* Table — needs collapse + sticky header */
+    .tbl-wrapper { overflow-x:auto;max-height:440px;overflow-y:auto; }
+    table { width:100%;border-collapse:collapse;font-size:.78rem; }
+    thead th {
+      position:sticky;top:0;
+      background:var(--color-surface);
+      padding:9px 12px;text-align:left;font-weight:600;
+      color:var(--color-text-muted);text-transform:uppercase;font-size:.64rem;letter-spacing:.05em;
+      border-bottom:1px solid var(--color-bdr);white-space:nowrap;cursor:pointer;user-select:none;
+    }
+    thead th:hover { color:var(--color-text-hover); }
+    tbody tr { border-bottom:1px solid var(--color-dim);transition:background .12s; }
+    tbody tr:hover { background:var(--color-dim); }
+    tbody td { padding:8px 12px;vertical-align:middle; }
+
+    /* Inner text colour for table rows in light mode */
+    [data-theme="light"] tbody td { color: var(--color-text); }
+
+    /* Parliament SVG */
+    .parliament-svg { width:100%;display:block;margin:0 auto; }
+    .parliament-svg circle { cursor:default;transition:r .12s; }
+    .parliament-svg circle:hover { r:9px; }
+    .arch-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start; }
+    @media (max-width:640px) { .arch-grid { grid-template-columns:1fr; } }
+
+    /* Scrollbar */
+    ::-webkit-scrollbar { width:5px;height:5px; }
+    ::-webkit-scrollbar-track { background:var(--color-app); }
+    ::-webkit-scrollbar-thumb { background:var(--color-bdr);border-radius:3px; }
+
+    /* Theme toggle button */
+    #theme-toggle {
+      display:flex;align-items:center;justify-content:center;
+      width:30px;height:30px;border-radius:6px;
+      background:var(--color-card);border:1px solid var(--color-bdr);
+      color:var(--color-text);cursor:pointer;
+      transition:background .2s,border-color .2s,color .2s;
+      font-size:15px;
+      flex-shrink:0;
+    }
+    #theme-toggle:hover { background:var(--color-dim); }
+
+    /* Fix input/select colours in light mode */
+    [data-theme="light"] input, [data-theme="light"] select {
+      background: var(--color-input-bg) !important;
+      color: var(--color-text) !important;
+      border-color: var(--color-bdr) !important;
+    }
+    [data-theme="light"] input::placeholder { color: var(--color-text-muted); }
+
+    /* Fix hardcoded #cdd0d6 text in light mode — becomes near-invisible on white */
+    [data-theme="light"] [class*="cdd0d6"] { color: var(--color-text) !important; }
+
+    /* Ensure muted text hierarchy is maintained in light mode */
+    [data-theme="light"] .text-gray-500 { color: var(--color-text-muted) !important; }
+
+    /* Fix card/header bg in light mode for sticky header */
+    [data-theme="light"] header { background: var(--color-surface) !important; border-color: var(--color-bdr) !important; }
+
+    /* Footer border in light mode */
+    [data-theme="light"] footer { border-color: var(--color-bdr) !important; color: var(--color-text-muted) !important; }
+  </style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+
+<!-- Header -->
+<header class="bg-surface border-b border-bdr px-6 py-3 flex items-center justify-between flex-wrap gap-2.5 sticky top-0 z-[100]">
+  <div class="flex items-center gap-3.5">
+    <div class="w-10 h-10 rounded-lg overflow-hidden border border-bdr shrink-0 bg-card flex items-center justify-center">
+      <img src="/public/logo.png" alt="Lila Election Tracker logo" class="w-full h-full object-cover block" />
+    </div>
+    <div>
+      <h1 class="text-base font-bold tracking-tight">Lila Election Tracker</h1>
+      <p class="text-[0.65rem] text-gray-500 mt-0.5">🇳🇵 प्रतिनिधि सभा निर्वाचन २०८२ · Live FPTP Results · Auto-refreshes every 2 min</p>
+    </div>
+  </div>
+  <div class="flex items-center gap-3 text-xs flex-wrap">
+    <div class="flex items-center gap-2 bg-card border border-bdr px-3 py-1 rounded-md">
+      <div id="status-dot" class="w-1.5 h-1.5 rounded-full bg-amber-500 status-loading"></div>
+      <span id="status-text">Connecting…</span>
+    </div>
+    <div class="bg-card border border-bdr px-3 py-1 rounded-md text-gray-500">Updated <span id="last-updated" class="text-[#cdd0d6] font-semibold">—</span></div>
+    <div class="bg-card border border-bdr px-3 py-1 rounded-md text-gray-500">Next in <span id="countdown" class="text-[#cdd0d6] font-semibold">—</span></div>
+    <button class="bg-card border border-bdr text-[#cdd0d6] rounded-md px-3 py-1.5 cursor-pointer hover:bg-dim transition-colors" onclick="fetchAll()">↻ Refresh Now</button>
+    <button id="theme-toggle" title="Toggle light / dark mode" onclick="toggleTheme()">🌙</button>
+  </div>
+</header>
+
+<!-- Main -->
+<main class="px-6 py-5 max-w-[1600px] mx-auto">
+
+  <!-- Metrics -->
+  <div class="grid grid-cols-[repeat(auto-fill,minmax(170px,1fr))] gap-3.5 mb-5">
+    <div class="bg-card border border-bdr rounded-lg p-4">
+      <div class="text-[0.65rem] text-gray-500 uppercase tracking-wider mb-2">Seats Won (विजयी)</div>
+      <div class="text-3xl font-bold leading-none text-green-500" id="m-won">—</div>
+      <div class="text-[0.7rem] text-gray-500 mt-1.5">FPTP declared</div>
+    </div>
+    <div class="bg-card border border-bdr rounded-lg p-4">
+      <div class="text-[0.65rem] text-gray-500 uppercase tracking-wider mb-2">Leading (अग्रस्थान)</div>
+      <div class="text-3xl font-bold leading-none text-amber-500" id="m-leading">—</div>
+      <div class="text-[0.7rem] text-gray-500 mt-1.5">counting ongoing</div>
+    </div>
+    <div class="bg-card border border-bdr rounded-lg p-4">
+      <div class="text-[0.65rem] text-gray-500 uppercase tracking-wider mb-2">Won + Leading</div>
+      <div class="text-3xl font-bold leading-none text-blue-400" id="m-total">—</div>
+      <div class="text-[0.7rem] text-gray-500 mt-1.5">of 165 seats</div>
+    </div>
+    <div class="bg-card border border-bdr rounded-lg p-4">
+      <div class="text-[0.65rem] text-gray-500 uppercase tracking-wider mb-2">Constituencies</div>
+      <div class="text-3xl font-bold leading-none text-violet-400" id="m-const">—</div>
+      <div class="text-[0.7rem] text-gray-500 mt-1.5">reporting / 165</div>
+    </div>
+    <div class="bg-card border border-bdr rounded-lg p-4">
+      <div class="text-[0.65rem] text-gray-500 uppercase tracking-wider mb-2">Majority Mark</div>
+      <div class="text-3xl font-bold leading-none text-red-400">83</div>
+      <div class="text-[0.7rem] text-gray-500 mt-1.5">seats needed</div>
+    </div>
+    <div class="bg-card border border-bdr rounded-lg p-4">
+      <div class="text-[0.65rem] text-gray-500 uppercase tracking-wider mb-2">Parties in Race</div>
+      <div class="text-3xl font-bold leading-none text-violet-400" id="m-parties">—</div>
+      <div class="text-[0.7rem] text-gray-500 mt-1.5">with seats / leading</div>
+    </div>
+    <div class="bg-card border border-bdr rounded-lg p-4">
+      <div class="text-[0.65rem] text-gray-500 uppercase tracking-wider mb-2">Fetch #</div>
+      <div class="text-3xl font-bold leading-none text-sky-400" id="m-fetch">0</div>
+      <div class="text-[0.7rem] text-gray-500 mt-1.5">since page load</div>
+    </div>
+  </div>
+
+  <!-- Party bars + Chart -->
+  <div class="grid gap-4 mb-5 grid-cols-1 lg:grid-cols-[1fr_2fr]">
+
+    <div class="bg-card border border-bdr rounded-lg overflow-hidden">
+      <div class="px-4 py-3 border-b border-bdr flex items-center justify-between">
+        <div>
+          <h2 class="text-sm font-semibold">Party-wise Seat Tally — दलगत स्थिति</h2>
+          <p class="text-[0.7rem] text-gray-500 mt-0.5">FPTP constituencies · Won + Leading</p>
+        </div>
+        <div class="flex gap-3.5 text-[0.67rem] text-gray-500">
+          <span><span class="inline-block w-2 h-2 rounded-full bg-green-500 mr-1 align-middle"></span>Won</span>
+          <span><span class="inline-block w-2 h-2 rounded-full bg-amber-500 mr-1 align-middle"></span>Leading</span>
+        </div>
+      </div>
+      <div class="p-4">
+        <div id="party-list">
+          <div class="skeleton h-[42px] mb-2.5"></div>
+          <div class="skeleton h-[42px] mb-2.5"></div>
+          <div class="skeleton h-[30px]"></div>
+        </div>
+        <!-- Majority progress -->
+        <div class="mt-3.5">
+          <div class="flex justify-between text-[0.7rem] text-gray-500 mb-1">
+            <span>Leading party progress to majority (83)</span>
+            <span id="majority-pct">—</span>
+          </div>
+          <div class="relative h-1 bg-dim rounded overflow-visible my-3">
+            <div id="majority-fill" class="h-full bg-blue-500 rounded transition-all duration-700" style="width:0%"></div>
+            <div class="absolute w-px h-4 bg-red-400 opacity-70" style="left:50.3%;top:-6px;transform:translateX(-50%)"></div>
+          </div>
+          <div class="text-[0.7rem] text-gray-500">
+            Majority threshold: <strong class="text-red-400">83 / 165 seats</strong>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="bg-card border border-bdr rounded-lg overflow-hidden">
+      <div class="px-4 py-3 border-b border-bdr">
+        <h2 class="text-sm font-semibold">Seat Distribution Chart</h2>
+        <p class="text-[0.7rem] text-gray-500 mt-0.5">Parliament arch · each dot = 1 seat · filled = won · ring = leading · lower cluster = est. PR</p>
+      </div>
+      <div class="p-4">
+        <div id="partyChart"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Nepal Province Map -->
+  <div class="bg-card border border-bdr rounded-lg overflow-hidden mb-5">
+    <div class="px-4 py-3 border-b border-bdr flex items-center justify-between">
+      <div>
+        <h2 class="text-sm font-semibold">District Map — जिल्ला नक्शा</h2>
+        <p class="text-[0.7rem] text-gray-500 mt-0.5">77 districts · leading party by declared seats · hover for per-constituency breakdown</p>
+      </div>
+      <div class="flex gap-3.5 text-[0.67rem] text-gray-500">
+        <span><span class="inline-block w-2 h-2 rounded-full bg-green-500 mr-1 align-middle"></span>Won seats</span>
+        <span><span class="inline-block w-2 h-2 rounded-full bg-dim border border-bdr mr-1 align-middle"></span>No data yet</span>
+      </div>
+    </div>
+    <div class="px-4 pt-2.5 pb-4">
+      <div id="nepal-map-container" class="min-h-[230px] relative">
+        <div class="skeleton h-[230px]"></div>
+      </div>
+      <div id="map-legend" class="flex flex-wrap gap-x-3.5 gap-y-1.5 pt-2 mt-2 border-t border-bdr"></div>
+    </div>
+  </div>
+
+  <!-- Popular Politicians Spotlight -->
+  <div class="bg-card border border-bdr rounded-lg overflow-hidden mb-5">
+    <div class="px-4 py-3 border-b border-bdr flex items-center justify-between flex-wrap gap-2">
+      <div>
+        <h2 class="text-sm font-semibold">Popular Politicians — चर्चित नेताहरू</h2>
+        <p class="text-[0.7rem] text-gray-500 mt-0.5">Notable candidates · real-time status · key opponents from the same constituency</p>
+      </div>
+      <div class="flex gap-1.5">
+        <button id="pol-tab-watchlist" onclick="switchPolTab('watchlist')"
+          class="px-2.5 py-1 rounded-md border text-[0.67rem] border-blue-500 bg-blue-500/20 text-blue-400 cursor-pointer">Watchlist</button>
+        <button id="pol-tab-top" onclick="switchPolTab('top')"
+          class="px-2.5 py-1 rounded-md border text-[0.67rem] border-bdr text-gray-500 hover:bg-dim cursor-pointer">Top by Votes</button>
+      </div>
+    </div>
+    <div class="p-4">
+      <div id="politicians-grid" class="grid gap-3" style="grid-template-columns:repeat(auto-fill,minmax(310px,1fr))">
+        <div class="skeleton h-[130px]"></div>
+        <div class="skeleton h-[130px]"></div>
+        <div class="skeleton h-[130px]"></div>
+        <div class="skeleton h-[130px]"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Winners table -->
+  <div class="bg-card border border-bdr rounded-lg overflow-hidden">
+    <div class="px-4 py-3 border-b border-bdr">
+      <h2 class="text-sm font-semibold">Elected Candidates — विजयी उम्मेदवार</h2>
+      <p id="winners-count" class="text-[0.7rem] text-gray-500 mt-0.5">Loading…</p>
+    </div>
+    <div class="p-4">
+      <div class="flex gap-2.5 mb-3 flex-wrap">
+        <input type="text" id="search" placeholder="Search in Nepali or English — e.g. 'Balen', 'RSP', 'Koshi'…" oninput="renderTable()"
+          class="flex-1 min-w-[180px] bg-surface border border-bdr text-[#cdd0d6] rounded-md px-3 py-1.5 text-xs outline-none focus:border-blue-500" />
+        <select id="filter-province" onchange="renderTable()"
+          class="bg-surface border border-bdr text-[#cdd0d6] rounded-md px-3 py-1.5 text-xs outline-none focus:border-blue-500">
+          <option value="">All Provinces</option>
+        </select>
+        <select id="filter-party" onchange="renderTable()"
+          class="bg-surface border border-bdr text-[#cdd0d6] rounded-md px-3 py-1.5 text-xs outline-none focus:border-blue-500">
+          <option value="">All Parties</option>
+        </select>
+        <select id="sort-col" onchange="renderTable()"
+          class="bg-surface border border-bdr text-[#cdd0d6] rounded-md px-3 py-1.5 text-xs outline-none focus:border-blue-500">
+          <option value="constituency_no">Sort: Constituency No.</option>
+          <option value="votes">Sort: Votes (high→low)</option>
+          <option value="candidate">Sort: Candidate Name</option>
+          <option value="party">Sort: Party</option>
+        </select>
+      </div>
+      <div class="tbl-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Constituency</th>
+              <th>District</th>
+              <th>Province</th>
+              <th>Candidate</th>
+              <th>Party</th>
+              <th>Votes</th>
+            </tr>
+          </thead>
+          <tbody id="winners-tbody">
+            <tr><td colspan="7" class="text-center py-10 text-gray-500 text-sm">Fetching results…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer class="text-center py-4 text-[0.7rem] text-gray-500 border-t border-bdr mt-2.5">
+  Data source: <a href="https://result.election.gov.np/" target="_blank" class="text-blue-500 hover:underline">result.election.gov.np</a> ·
+  Election Commission of Nepal · Auto-refreshes every 2 minutes
+</footer>
+
+<div id="toast" style="background:var(--color-toast-bg)" class="fixed bottom-6 right-6 z-[999] border border-bdr text-[#cdd0d6] rounded-md px-4 py-2.5 text-xs hidden"></div>
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+//  Light / Dark theme toggle
+// ════════════════════════════════════════════════════════════════════
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  document.getElementById('theme-toggle').textContent = theme === 'dark' ? '🌙' : '☀️';
+  localStorage.setItem('theme', theme);
+}
+function toggleTheme() {
+  const current = document.documentElement.getAttribute('data-theme');
+  applyTheme(current === 'dark' ? 'light' : 'dark');
+}
+// Initialise from saved preference or OS preference
+(function () {
+  const saved = localStorage.getItem('theme');
+  if (saved) { applyTheme(saved); return; }
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  applyTheme(prefersDark ? 'dark' : 'light');
+})();
+</script>
+
+<script>
+// ════════════════════════════════════════════════════════════════════
+//  Devanagari → Roman transliteration (for English search support)
+//  Uses char-by-char processing: consonant + matra/halant-aware.
+//  Fixes over the old table approach:
+//    (1) Half-consonant (halant): स् + त → 'st' not 'sat'
+//    (2) Consonant + matra:       न + े  → 'ne' not 'nae'
+//  Result: नेपाल → 'nepala'  नमस्ते → 'namaste'  राष्ट्रिय → 'rashtriya'
+// ════════════════════════════════════════════════════════════════════
+
+// Pre-process known multi-character conjuncts before char iteration
+const DEV_CONJUNCTS = {
+  'क्ष':'ksh', 'त्र':'tr',  'ज्ञ':'gy',  'श्र':'shr',
+  'ट्र':'tr',  'ड्र':'dr',  'ह्र':'hr',  'प्र':'pr',
+  'ग्र':'gr',  'ब्र':'br',  'क्र':'kr',  'ग्य':'gy',
+  'ङ्ग':'ng',  'ञ्च':'nch', 'ट्ट':'tt',  'ड्ड':'dd',
+  'ह्न':'hn',  'ह्म':'hm',  'ल्ह':'lh',  'म्ह':'mh',
+};
+// Consonants → base sound (inherent 'a' added unless followed by matra or halant)
+const DEV_CONS = {
+  'क':'k', 'ख':'kh','ग':'g', 'घ':'gh','ङ':'ng',
+  'च':'ch','छ':'chh','ज':'j','झ':'jh','ञ':'ny',
+  'ट':'t', 'ठ':'th','ड':'d', 'ढ':'dh','ण':'n',
+  'त':'t', 'थ':'th','द':'d', 'ध':'dh','न':'n',
+  'प':'p', 'फ':'ph','ब':'b', 'भ':'bh','म':'m',
+  'य':'y', 'र':'r', 'ल':'l', 'व':'w', 'श':'sh',
+  'ष':'sh','स':'s', 'ह':'h',
+};
+// Vowel matras (diacritics) — override the inherent 'a' of the preceding consonant
+const DEV_MATRA = {
+  '\u093E':'a',  // ा  aa-matra  (kept as 'a' for phonetic match)
+  '\u093F':'i',  // ि  i-matra
+  '\u0940':'i',  // ी  ii-matra
+  '\u0941':'u',  // ु  u-matra
+  '\u0942':'u',  // ू  uu-matra
+  '\u0947':'e',  // े  e-matra
+  '\u0948':'ai', // ै  ai-matra
+  '\u094B':'o',  // ो  o-matra
+  '\u094C':'au', // ौ  au-matra
+  '\u0943':'ri', // ृ  ri-matra
+};
+// Independent vowels (word-initial position)
+const DEV_VOWEL = {
+  'अ':'a', 'आ':'aa','इ':'i', 'ई':'i', 'उ':'u', 'ऊ':'u',
+  'ए':'e', 'ऐ':'ai','ओ':'o', 'औ':'au','ऋ':'ri',
+};
+// Devanagari digits
+const DEV_DIGIT = {
+  '०':'0','१':'1','२':'2','३':'3','४':'4',
+  '५':'5','६':'6','७':'7','८':'8','९':'9',
+};
+const HALANT = '\u094D'; // ् virama — suppresses the inherent vowel of the consonant
+
+/**
+ * Convert Devanagari text → Roman equivalent for search matching.
+ *
+ * Algorithm: iterate Unicode code points and look ahead one character:
+ *   C + ् (halant)  → consonant only     e.g. स् → 's'
+ *   C + matra       → consonant + vowel  e.g. ने → 'ne'
+ *   C alone         → consonant + 'a'   e.g. न  → 'na'
+ *
+ * This correctly handles:
+ *   नेपाल    → nepala   (substring-matches "nepal")
+ *   नमस्ते   → namaste
+ *   राष्ट्रिय → rashtriya
+ *   वालेन्द्र → walendra
+ */
+function devToRoman(text) {
+  if (!text) return '';
+  // Step 1: expand known conjuncts to their Roman strings
+  let s = text;
+  for (const [cj, rom] of Object.entries(DEV_CONJUNCTS)) s = s.split(cj).join(rom);
+  // Step 2: normalise scattered diacritics
+  s = s.replace(/ँ/g, 'n').replace(/ं/g, 'n').replace(/ः/g, 'h').replace(/[़]/g, '');
+
+  // Step 3: char-by-char pass
+  const chars = [...s];
+  let out = '';
+  let i = 0;
+  while (i < chars.length) {
+    const ch = chars[i];
+    if (DEV_CONS[ch] !== undefined) {
+      const next = chars[i + 1];
+      if (next === HALANT) {
+        // Half consonant — consume consonant + halant, no inherent vowel
+        out += DEV_CONS[ch];
+        i += 2;
+      } else if (DEV_MATRA[next] !== undefined) {
+        // Consonant + explicit vowel matra — no inherent 'a'
+        out += DEV_CONS[ch] + DEV_MATRA[next];
+        i += 2;
+      } else {
+        // Consonant with inherent 'a'
+        out += DEV_CONS[ch] + 'a';
+        i += 1;
+      }
+    } else if (DEV_VOWEL[ch] !== undefined) {
+      out += DEV_VOWEL[ch]; i += 1;
+    } else if (DEV_DIGIT[ch] !== undefined) {
+      out += DEV_DIGIT[ch]; i += 1;
+    } else if (DEV_MATRA[ch] !== undefined) {
+      out += DEV_MATRA[ch]; i += 1; // orphan matra (shouldn't occur)
+    } else {
+      out += ch; i += 1; // pass through: spaces, punctuation, Latin chars
+    }
+  }
+  return out.toLowerCase().replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Collapse phonetic variants so "balen" matches वालेन्द्र, "thapa" matches थापा, etc.
+ * Key rules:
+ *   w / v  → b  (Nepali व is romanised both ways; people write "Balen" not "Walen")
+ *   aspirates: ph→f, sh→s, chh/ch→c, kh→k, gh→g, th→t, dh→d, bh→b
+ *   long vowels: aa→a  ii→i  uu→u
+ *   duplicate letters collapsed
+ */
+function phoneticNormalize(s) {
+  return s
+    .replace(/chh/g, 'c').replace(/ch/g, 'c')
+    .replace(/ph/g, 'f')
+    .replace(/sh/g, 's')
+    .replace(/kh/g, 'k')
+    .replace(/gh/g, 'g')
+    .replace(/th/g, 't')
+    .replace(/dh/g, 'd')
+    .replace(/bh/g, 'b')
+    .replace(/[wv]/g, 'b')   // KEY: व romanised as w or v, but people type b (Balen)
+    .replace(/aa/g, 'a').replace(/ii/g, 'i').replace(/uu/g, 'u')
+    .replace(/(.)(\1)/g, '$1') // collapse doubled letters
+    .replace(/[^a-z0-9 ]/g, '').trim();
+}
+
+// Party short-name / English aliases → Nepali substrings to match
+const PARTY_ALIASES = {
+  "rsp":        "राष्ट्रिय स्वतन्त्र",
+  "rastriya swatantra": "राष्ट्रिय स्वतन्त्र",
+  "nc":         "नेपाली काँग्रेस",
+  "congress":   "काँग्रेस",
+  "nepali congress": "काँग्रेस",
+  "uml":        "एकीकृत मार्क्सवादी",
+  "marxist":    "मार्क्सवादी",
+  "communist":  "कम्युनिष्ट",
+  "ncp":        "नेपाली कम्युनिष्ट",
+  "rpp":        "राष्ट्रिय प्रजातन्त्र",
+  "independent": "स्वतन्त्र",
+  "swatantra":  "स्वतन्त्र",
+  "labor":      "श्रम",
+  "labour":     "श्रम",
+  "koshi":      "कोशी",
+  "bagmati":    "बागमती",
+  "gandaki":    "गण्डकी",
+  "lumbini":    "लुम्बिनी",
+  "karnali":    "कर्णाली",
+  "sudurpaschim": "सुदूरपश्चिम",
+  "madhesh":    "मधेश",
+  "province 1": "कोशी",
+  "province 2": "मधेश",
+  "province 3": "बागमती",
+  "province 4": "गण्डकी",
+  "province 5": "लुम्बिनी",
+  "province 6": "कर्णाली",
+  "province 7": "सुदूरपश्चिम",
+};
+
+/**
+ * Build a unified searchable string for a winner row:
+ * Nepali text + Roman transliteration + alias expansions
+ */
+function buildSearchKey(w) {
+  const nepali   = [w.candidate, w.party, w.district, w.constituency, w.province].join(" ");
+  const roman    = devToRoman(nepali);
+  const phonetic = phoneticNormalize(roman);
+  return (nepali + " " + roman + " " + phonetic).toLowerCase();
+}
+
+// Mapper for the rich per-file JSON format (winners + per-constituency files)
+function mapCandidate(d) {
+  return {
+    constituency_no: d.ScConstId || d.ConstNo || d.ConstId || d.ConstituencyNo || d.HoRConstId || d.ConsNo,
+    constituency:    (d.ConstName || d.ScConstName || d.ConstituencyName || '').replace(/^प्रतिनिधि सभा सदस्य निर्वाचन क्षेत्र\s*/u, '').trim(),
+    district:        d.DistrictName,
+    province:        d.StateName,
+    candidate:       d.CandidateName,
+    party:           d.PartyName || d.PoliticalPartyName,
+    votes:           d.TotalVote || 0,
+    symbolId:        d.SymbolId  || d.SymbolID,
+    candidateId:     d.CandidateId,
+  };
+}
+
+/**
+ * Mapper for the central jqGrid response.
+ * cell[] order: [province, district, constNo, name, gender, party, symbol, votes, status]
+ */
+function mapCentralRow(row) {
+  const c = row.cell || [];
+  return {
+    province:        c[0] || '',
+    district:        c[1] || '',
+    constituency_no: c[2] || '',
+    candidate:       c[3] || '',
+    gender:          c[4] || '',
+    party:           c[5] || '',
+    symbol:          c[6] || '',
+    votes:           parseInt(c[7], 10) || 0,
+    elected:         (c[8] || '').trim() === 'Elected',
+    constituency:    '',   // patched from allWinners after load
+    candidateId:     null, // patched from allWinners after load
+    symbolId:        null, // patched from allWinners after load
+  };
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Per-constituency candidate index (built from the central dataset)
+// ════════════════════════════════════════════════════════════════════
+
+// constNo(string) → candidate[]  sorted by votes desc
+// Populated once in fetchAll() from the central jqGrid response.
+let constCandsByNo = {};
+
+/**
+ * Return all candidates for a constituency.
+ * Primary:  constCandsByNo index (built from central 3.4 MB dataset — no API call needed).
+ * Fallback: old per-constituency file fetch (used only if central data wasn't loaded yet).
+ */
+async function fetchConstCandidates(constNo, candObj) {
+  const key = constNo ? String(constNo) : null;
+
+  // Fast path — already indexed from centre data
+  if (key && constCandsByNo[key] && constCandsByNo[key].length > 0) {
+    return constCandsByNo[key];
+  }
+
+  // Fallback: filter allCandidates by constituency name if no key
+  if (allCandidates.length > 0) {
+    const constName = candObj?.constituency || '';
+    let filtered = key
+      ? allCandidates.filter(c => String(c.constituency_no) === key)
+      : [];
+    if (filtered.length === 0 && constName) {
+      filtered = allCandidates.filter(c => c.constituency === constName);
+    }
+    if (filtered.length >= 1) return filtered;
+  }
+
+  return null;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Config
+// ════════════════════════════════════════════════════════════════════
+const INTERVAL = 120_000;   // 2 minutes
+// ⚙️  Change this to your GitHub Pages URL once the repo is published.
+// The data/data.json is auto-updated every 10 min by .github/workflows/fetch-election-data.yml
+const DATA_URL = "https://samurato.github.io/nepali_election/data/data.json";
+const PARTY_COLORS = [
+  "#3b82f6","#22c55e","#ef4444","#eab308",
+  "#8b5cf6","#f97316","#06b6d4","#ec4899",
+  "#14b8a6","#a855f7","#84cc16",
+];
+
+// ════════════════════════════════════════════════════════════════════
+//  State
+// ════════════════════════════════════════════════════════════════════
+let partyData     = [];
+let allWinners    = [];
+let allCandidates = [];   // all candidates from the central jqGrid dataset
+let chart         = null;
+let fetchCount    = 0;
+let nextAt        = null;
+let partyColorMap = {};
+
+// ════════════════════════════════════════════════════════════════════
+//  Data loader — single data.json fetch
+// ════════════════════════════════════════════════════════════════════
+async function fetchAll() {
+  setStatus("loading", "Fetching…");
+  startProgressBar();
+  try {
+    const res = await fetch(DATA_URL);
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const data = await res.json();
+
+    if (!data.parties?.length && !data.winners?.length) {
+      setStatus("error", "No data — retrying in 2 min");
+      showToast("✗ data.json contains no results. Will retry.", true);
+      return;
+    }
+
+    partyData  = (data.parties  || []).sort((a, b) => b.total - a.total);
+    allWinners = (data.winners  || []);
+    allWinners.forEach(w => { w._searchKey = buildSearchKey(w); });
+
+    // Build per-constituency candidate index
+    allCandidates = (data.candidates || []);
+    allCandidates.forEach(c => { c._searchKey = buildSearchKey(c); });
+    constCandsByNo = {};
+    allCandidates.forEach(c => {
+      const key = String(c.constituency_no);
+      if (!constCandsByNo[key]) constCandsByNo[key] = [];
+      constCandsByNo[key].push(c);
+    });
+    Object.values(constCandsByNo).forEach(arr => arr.sort((a, b) => (b.votes || 0) - (a.votes || 0)));
+    console.log(`[data] parties=${partyData.length}  winners=${allWinners.length}  candidates=${allCandidates.length}`);
+
+    // Build colour map
+    partyColorMap = {};
+    partyData.forEach((p, i) => {
+      partyColorMap[p.party] = PARTY_COLORS[i % PARTY_COLORS.length];
+    });
+
+    // Attach estimated PR seats (Sainte-Laguë)
+    const prEst = computeEstimatedPR();
+    partyData.forEach(p => { p.prSeats = prEst[p.party] || 0; });
+
+    fetchCount++;
+    nextAt = Date.now() + INTERVAL;
+
+    updateMetrics();
+    renderPartyList();
+    renderChart();
+    populateFilters();
+    renderTable();
+    renderMap();   // async, non-blocking
+    renderPoliticiansBox();
+
+    const ts = new Date().toLocaleTimeString();
+    document.getElementById("last-updated").textContent = ts;
+    document.getElementById("m-fetch").textContent = fetchCount;
+    setStatus("ok", "Live");
+    showToast(`✓ Updated at ${ts}`);
+
+  } catch (err) {
+    setStatus("error", "Error — retrying in 2 min");
+    showToast(`✗ ${err.message}`, true);
+    console.error(err);
+  } finally {
+    endProgressBar();
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Metrics
+// ════════════════════════════════════════════════════════════════════
+function updateMetrics() {
+  const totalWon     = partyData.reduce((s, p) => s + p.won,     0);
+  const totalLeading = partyData.reduce((s, p) => s + p.leading, 0);
+  const topTotal     = partyData[0]?.total ?? 0;
+
+  document.getElementById("m-won").textContent     = totalWon;
+  document.getElementById("m-leading").textContent = totalLeading;
+  document.getElementById("m-total").textContent   = totalWon + totalLeading;
+  document.getElementById("m-const").textContent   = allWinners.length + " / 165";
+  document.getElementById("m-parties").textContent = partyData.length;
+
+  // Majority progress for leading party
+  const pct = Math.min(100, (topTotal / 83 * 100)).toFixed(1);
+  document.getElementById("majority-fill").style.width = pct + "%";
+  document.getElementById("majority-pct").textContent  = `${topTotal} / 83 (${pct}%)`;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Party bars
+// ════════════════════════════════════════════════════════════════════
+function renderPartyList() {
+  const el = document.getElementById("party-list");
+  if (!partyData.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;font-size:.85rem">No data</div>'; return; }
+
+  const maxTotal = Math.max(...partyData.map(p => p.total), 1);
+
+  el.innerHTML = `<div style="display:flex;flex-direction:column;gap:11px">${
+    partyData.map((p, i) => {
+      const color   = PARTY_COLORS[i % PARTY_COLORS.length];
+      const barWon  = (p.won     / maxTotal * 100).toFixed(1);
+      const barLed  = (p.leading / maxTotal * 100).toFixed(1);
+      const symImg  = p.symbolId
+        ? `<img style="width:28px;height:28px;border-radius:4px;object-fit:contain;background:rgba(255,255,255,.08);flex-shrink:0" src="https://result.election.gov.np/Images/symbol-hor-pa/${p.symbolId}.jpg" alt="" loading="lazy" onerror="this.style.display='none'">`
+        : '';
+      return `
+        <div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+            <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0">
+              ${symImg}
+              <span style="font-size:.8rem;font-weight:500;color:${color};max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${p.party}">${p.party}</span>
+            </div>
+            <span style="font-size:.8rem;font-weight:700;white-space:nowrap">
+              <span style="color:#22c55e">${p.won}</span>
+              <span style="color:#475569"> + </span>
+              <span style="color:#d97706">${p.leading}</span>
+              <span style="color:#6b7280"> = ${p.total}</span>
+            </span>
+          </div>
+          <div style="height:6px;background:var(--color-dim);border-radius:3px;overflow:hidden;display:flex">
+            <div style="background:#22c55e;height:100%;width:${barWon}%;transition:width .6s ease;border-radius:3px 0 0 3px"></div>
+            <div style="background:#d97706;height:100%;width:${barLed}%;transition:width .6s ease;border-radius:0 3px 3px 0"></div>
+          </div>
+        </div>`;
+    }).join("")
+  }</div>`;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Estimated PR allocation (Sainte-Laguë method)
+// ════════════════════════════════════════════════════════════════════
+function computeEstimatedPR() {
+  // Aggregate votes from FPTP winners as a proxy for party vote share
+  const voteMap = {};
+  allWinners.forEach(w => {
+    if (w.party && w.votes) voteMap[w.party] = (voteMap[w.party] || 0) + w.votes;
+  });
+  const totalVotes = Object.values(voteMap).reduce((s, v) => s + v, 0);
+  if (totalVotes === 0) return {};
+
+  // Threshold: ≥3% of total FPTP winner votes OR won at least 1 FPTP seat
+  const wonParties = new Set(partyData.filter(p => p.won > 0).map(p => p.party));
+  const eligible = {};
+  for (const [party, votes] of Object.entries(voteMap)) {
+    if (votes / totalVotes >= 0.03 || wonParties.has(party)) eligible[party] = votes;
+  }
+
+  // Sainte-Laguë: divisors 1, 3, 5, 7, …
+  const seats = {};
+  Object.keys(eligible).forEach(k => seats[k] = 0);
+  for (let i = 0; i < 110; i++) {
+    let best = null, bestScore = -Infinity;
+    for (const [party, votes] of Object.entries(eligible)) {
+      const score = votes / (seats[party] * 2 + 1);
+      if (score > bestScore) { bestScore = score; best = party; }
+    }
+    if (best) seats[best]++;
+  }
+  return seats;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Parliament Dot Chart
+// ════════════════════════════════════════════════════════════════════
+function renderChart() {
+  const el = document.getElementById("partyChart");
+  if (!partyData.length) { el.innerHTML = '<div class="no-data">No data</div>'; return; }
+
+  // ──────── FPTP arch (165 seats, 4 rows) ────────
+  const FPTP_TOTAL   = 165;
+  const totalWon     = partyData.reduce((s, p) => s + p.won,     0);
+  const totalLeading = partyData.reduce((s, p) => s + p.leading, 0);
+  const totalDecl    = totalWon + totalLeading;
+  const unallocated  = Math.max(0, FPTP_TOTAL - totalDecl);
+
+  const fptpSeats = [];
+  partyData.forEach((p, i) => {
+    const color = PARTY_COLORS[i % PARTY_COLORS.length];
+    for (let j = 0; j < p.won;     j++) fptpSeats.push({ label: p.party, color, type: 'won'      });
+    for (let j = 0; j < p.leading; j++) fptpSeats.push({ label: p.party, color, type: 'leading'  });
+  });
+  for (let j = 0; j < unallocated; j++)
+    fptpSeats.push({ label: 'Undecided', color: '#475569', type: 'undecided' });
+
+  const CX_F = 200, CY_F = 10;
+  const FPTP_ROWS = [
+    { r:  88, n: 28 }, { r: 125, n: 38 },
+    { r: 162, n: 48 }, { r: 199, n: 51 }
+  ];
+  const DR_F = 5.8, A0 = Math.PI * 0.955, A1 = Math.PI * 0.045, AR = A0 - A1;
+
+  let si = 0;
+  const fptpCircles = [];
+  for (const row of FPTP_ROWS) {
+    for (let k = 0; k < row.n; k++) {
+      const theta = A0 - (k / (row.n - 1)) * AR;
+      fptpCircles.push({
+        x: CX_F + row.r * Math.cos(theta),
+        y: CY_F + row.r * Math.sin(theta),
+        ...( fptpSeats[si++] || { label: 'Undecided', color: '#475569', type: 'undecided' })
+      });
+    }
+  }
+
+  // Majority guide line
+  const mr1 = FPTP_ROWS[0].r - 14, mr2 = FPTP_ROWS[3].r + 14;
+  const majLine = `
+    <line x1="${CX_F}" y1="${(CY_F + mr1).toFixed(1)}" x2="${CX_F}" y2="${(CY_F + mr2).toFixed(1)}"
+      stroke="#e55" stroke-width="1" stroke-dasharray="4 3" opacity="0.5"/>
+    <text x="${CX_F + 4}" y="${(CY_F + mr2 + 3).toFixed(1)}"
+      fill="#e55" font-size="9" font-family="system-ui" opacity="0.8">83</text>`;
+
+  const fptpSVG = fptpCircles.map(c => {
+    const attrs = c.type === 'won'
+      ? `fill="${c.color}"`
+      : c.type === 'leading'
+        ? `fill="${c.color}" fill-opacity="0.25" stroke="${c.color}" stroke-width="1.5"`
+        : `fill="#475569" fill-opacity="0.22"`;
+    return `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${DR_F}" ${attrs}><title>${c.label.replace(/"/g,'&quot;')}</title></circle>`;
+  }).join('');
+
+  // ──────── PR arch (110 seats estimated, 3 rows) ────────
+  const PR_TOTAL  = 110;
+  const CX_P = 200, CY_P = 10;
+  const PR_ROWS   = [{ r: 60, n: 28 }, { r: 84, n: 38 }, { r: 108, n: 44 }];
+  const DR_P = 4.6;
+
+  const prSeats = [];
+  let prTotal = 0;
+  partyData.forEach((p, i) => {
+    const color = PARTY_COLORS[i % PARTY_COLORS.length];
+    const n = p.prSeats || 0;
+    prTotal += n;
+    for (let j = 0; j < n; j++) prSeats.push({ label: p.party, color });
+  });
+  const prUnalloc = Math.max(0, PR_TOTAL - prSeats.length);
+  for (let j = 0; j < prUnalloc; j++) prSeats.push({ label: 'Not yet allocated', color: '#475569', dim: true });
+
+  let pi2 = 0;
+  const prCircles = [];
+  for (const row of PR_ROWS) {
+    for (let k = 0; k < row.n; k++) {
+      const theta = A0 - (k / (row.n - 1)) * AR;
+      prCircles.push({
+        x: CX_P + row.r * Math.cos(theta),
+        y: CY_P + row.r * Math.sin(theta),
+        ...(prSeats[pi2++] || { label: 'Not yet allocated', color: '#475569', dim: true })
+      });
+    }
+  }
+
+  const prSVG = prCircles.map(c => {
+    const attrs = c.dim
+      ? `fill="#475569" fill-opacity="0.2"`
+      : `fill="${c.color}"`;
+    return `<circle cx="${c.x.toFixed(1)}" cy="${c.y.toFixed(1)}" r="${DR_P}" ${attrs}><title>${c.label.replace(/"/g,'&quot;')}</title></circle>`;
+  }).join('');
+
+  // ──────── Legend ────────
+  const legendHTML = partyData.map((p, i) => {
+    const color = PARTY_COLORS[i % PARTY_COLORS.length];
+    const name  = p.party.length > 28 ? p.party.slice(0, 28) + '…' : p.party;
+    return `
+      <div style="display:flex;align-items:center;gap:5px;font-size:.68rem;color:#6b7280;white-space:nowrap">
+        <div style="width:9px;height:9px;border-radius:50%;flex-shrink:0;background:${color}"></div>
+        <span>${name}</span>
+        <span style="font-weight:700;color:#cdd0d6">${p.total}</span>
+        <span style="font-size:.6rem;color:#4b5563">FPTP</span>
+        <span style="font-weight:700;color:#a78bfa">${p.prSeats || 0}</span>
+        <span style="font-size:.6rem;color:#4b5563">~PR</span>
+      </div>`;
+  }).join('');
+
+  el.innerHTML = `
+    <div style="display:flex;flex-direction:column;gap:14px;padding:4px 0">
+      <div>
+        <div style="display:flex;align-items:baseline;gap:8px;justify-content:center;flex-wrap:wrap">
+          <span style="font-size:2.2rem;font-weight:700;line-height:1;color:#cdd0d6">${totalDecl}</span>
+          <span style="font-size:.85rem;color:#6b7280">/ ${FPTP_TOTAL} FPTP seats</span>
+          <span style="margin-left:14px;font-size:1rem;color:#a78bfa;font-weight:600">${prTotal}</span>
+          <span style="font-size:.85rem;color:#6b7280">/ ${PR_TOTAL} est. PR</span>
+        </div>
+        <div style="display:flex;justify-content:center;gap:18px;font-size:.68rem;color:#6b7280;margin-top:4px;flex-wrap:wrap">
+          <span style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:50%;background:#60a5fa;flex-shrink:0"></div> Won: <strong>${totalWon}</strong></span>
+          <span style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:50%;background:#60a5fa44;border:2px solid #60a5fa;box-sizing:border-box;flex-shrink:0"></div> Leading: <strong>${totalLeading}</strong></span>
+          <span style="display:flex;align-items:center;gap:5px"><div style="width:10px;height:10px;border-radius:50%;background:#475569;opacity:.3;flex-shrink:0"></div> Undecided: <strong>${unallocated}</strong></span>
+          <span style="color:#9ca3af">┆ majority = 83</span>
+        </div>
+      </div>
+      <div class="arch-grid">
+        <div>
+          <p style="text-align:center;font-size:.62rem;letter-spacing:.08em;color:#475569;text-transform:uppercase;margin-bottom:3px">FPTP — First Past the Post &nbsp;(165 seats)</p>
+          <svg class="parliament-svg" viewBox="0 0 400 230" xmlns="http://www.w3.org/2000/svg">
+            ${majLine}
+            ${fptpSVG}
+          </svg>
+        </div>
+        <div>
+          <p style="text-align:center;font-size:.62rem;letter-spacing:.08em;color:#7c3aed;text-transform:uppercase;margin-bottom:3px">Est. PR — Proportional Rep. &nbsp;(110 seats)</p>
+          <svg class="parliament-svg" viewBox="0 0 400 130" xmlns="http://www.w3.org/2000/svg">
+            ${prSVG}
+          </svg>
+        </div>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 14px;border-top:1px solid var(--color-bdr);padding-top:10px">${legendHTML}</div>
+    </div>`;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Winners table
+// ════════════════════════════════════════════════════════════════════
+function populateFilters() {
+  const provinces = [...new Set(allWinners.map(w => w.province).filter(Boolean))].sort();
+  const parties   = [...new Set(allWinners.map(w => w.party).filter(Boolean))].sort();
+
+  const pSel  = document.getElementById("filter-province");
+  const ptSel = document.getElementById("filter-party");
+  const curP  = pSel.value, curPt = ptSel.value;
+
+  pSel.innerHTML  = '<option value="">All Provinces</option>' +
+    provinces.map(v => `<option value="${v}"${v===curP?" selected":""}>${v}</option>`).join("");
+  ptSel.innerHTML = '<option value="">All Parties</option>' +
+    parties.map(v => `<option value="${v}"${v===curPt?" selected":""}>${v}</option>`).join("");
+}
+
+function renderTable() {
+  const search   = document.getElementById("search").value.toLowerCase();
+  const province = document.getElementById("filter-province").value;
+  const party    = document.getElementById("filter-party").value;
+  const sortKey  = document.getElementById("sort-col").value;
+
+  // Expand query via aliases then transliterate for Roman→Nepali match
+  let queryNepali = search;
+  for (const [en, ne] of Object.entries(PARTY_ALIASES)) {
+    if (search.includes(en)) queryNepali += " " + ne;
+  }
+  const queryRoman    = devToRoman(queryNepali);
+  const queryPhonetic = phoneticNormalize(queryRoman || search);
+
+  let rows = allWinners.filter(w => {
+    if (province && w.province !== province) return false;
+    if (party    && w.party    !== party)    return false;
+    if (search) {
+      const key = w._searchKey || buildSearchKey(w);
+      const matchNepali   = key.includes(queryNepali);
+      const matchRoman    = queryRoman    && key.includes(queryRoman);
+      const matchPhonetic = queryPhonetic.length > 1 && key.includes(queryPhonetic);
+      if (!matchNepali && !matchRoman && !matchPhonetic) return false;
+    }
+    return true;
+  });
+
+  rows.sort((a, b) => {
+    if (sortKey === "votes")     return (b.votes || 0) - (a.votes || 0);
+    if (sortKey === "candidate") return (a.candidate || "").localeCompare(b.candidate || "");
+    if (sortKey === "party")     return (a.party || "").localeCompare(b.party || "");
+    return (a.constituency_no || 0) - (b.constituency_no || 0);
+  });
+
+  document.getElementById("winners-count").textContent =
+    `${rows.length} of ${allWinners.length} elected candidates`;
+
+  const tbody = document.getElementById("winners-tbody");
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:40px;color:#6b7280;font-size:.85rem">No matching results</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = rows.map((w, i) => {
+    const color = partyColorMap[w.party] || "#64748b";
+    const votes = w.votes ? Number(w.votes).toLocaleString() : "—";
+    return `<tr>
+      <td style="color:#6b7280">${i + 1}</td>
+      <td><strong>${w.constituency || "—"}</strong></td>
+      <td>${w.district || "—"}</td>
+      <td style="color:#a78bfa">${w.province || "—"}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:7px">
+          ${w.candidateId ? `<img style="width:32px;height:32px;border-radius:50%;object-fit:cover;background:var(--color-surface);flex-shrink:0;border:1px solid var(--color-bdr)" src="https://result.election.gov.np/Images/Candidate/${w.candidateId}.jpg" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}
+          <strong>${w.candidate || '—'}</strong>
+        </div>
+      </td>
+      <td>
+        <div style="display:flex;align-items:center;gap:7px">
+          ${w.symbolId ? `<img style="width:28px;height:28px;border-radius:4px;object-fit:contain;background:rgba(255,255,255,.08);flex-shrink:0" src="https://result.election.gov.np/Images/symbol-hor-pa/${w.symbolId}.jpg" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}
+          <span style="display:inline-block;padding:2px 8px;border-radius:20px;font-size:.67rem;font-weight:600;white-space:nowrap;background:${color}22;color:${color};border:1px solid ${color}44">
+            ${w.party || '—'}
+          </span>
+        </div>
+      </td>
+      <td style="font-variant-numeric:tabular-nums;color:#93c5fd;font-weight:600">${votes}</td>
+    </tr>`;
+  }).join("");
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Nepal District Map  (D3 + district GeoJSON — near-constituency level)
+// ════════════════════════════════════════════════════════════════════
+let _nepalDistGeo = null;   // cached GeoJSON
+
+// Full Nepali district name → GeoJSON DISTRICT key (uppercase English)
+const DIST_NE_TO_EN = {
+  // ── Koshi Province ──
+  'ताप्लेजुङ':'TAPLEJUNG','पाँचथर':'PANCHTHAR','इलाम':'ILAM','झापा':'JHAPA',
+  'मोरङ':'MORANG','सुनसरी':'SUNSARI','धनकुटा':'DHANKUTA','तेह्रथुम':'TEHRATHUM',
+  'संखुवासभा':'SANKHUWASABHA','भोजपुर':'BHOJPUR','सोलुखुम्बु':'SOLUKHUMBU',
+  'ओखलढुङ्गा':'OKHALDHUNGA','खोटाङ':'KHOTANG','उदयपुर':'UDAYAPUR',
+  // ── Madhesh Province ──
+  'सप्तरी':'SAPTARI','सिरहा':'SIRAHA','धनुषा':'DHANUSA','महोत्तरी':'MAHOTTARI',
+  'सर्लाही':'SARLAHI','रौतहट':'RAUTAHAT','बारा':'BARA','पर्सा':'PARSA',
+  // ── Bagmati Province ──
+  'सिन्धुली':'SINDHULI','रामेछाप':'RAMECHHAP','दोलखा':'DOLAKHA',
+  'सिन्धुपाल्चोक':'SINDHUPALCHOK','काभ्रेपलाञ्चोक':'KAVREPALANCHOK',
+  'ललितपुर':'LALITPUR','भक्तपुर':'BHAKTAPUR','काठमाडौं':'KATHMANDU',
+  'नुवाकोट':'NUWAKOT','रसुवा':'RASUWA','धादिङ':'DHADING','मकवानपुर':'MAKWANPUR',
+  'चितवन':'CHITWAN',
+  // ── Gandaki Province ──
+  'गोरखा':'GORKHA','लमजुङ':'LAMJUNG','तनहुँ':'TANAHUN','स्याङ्जा':'SYANGJA',
+  'कास्की':'KASKI','मनाङ':'MANANG','मुस्ताङ':'MUSTANG','म्याग्दी':'MYAGDI',
+  'पर्वत':'PARBAT','बाग्लुङ':'BAGLUNG',
+  // East Nawalparasi maps to old NAWALPARASI in GeoJSON
+  'नवलपरासी':'NAWALPARASI','नवलपुर':'NAWALPARASI',
+  // ── Lumbini Province ──
+  'रूपन्देही':'RUPANDEHI','कपिलवस्तु':'KAPILVASTU','अर्घाखाँची':'ARGHAKHANCHI',
+  'पाल्पा':'PALPA','गुल्मी':'GULMI','दाङ':'DANG','प्युठान':'PYUTHAN',
+  'रोल्पा':'ROLPA','रुकुम पूर्व':'RUKUM','बाँके':'BANKE','बर्दिया':'BARDIYA',
+  // ── Karnali Province ──
+  'रुकुम पश्चिम':'RUKUM','सल्यान':'SALYAN','डोल्पा':'DOLPA','जुम्ला':'JUMLA',
+  'कालिकोट':'KALIKOT','मुगु':'MUGU','हुम्ला':'HUMLA','जाजरकोट':'JAJARKOT',
+  'दैलेख':'DAILEKH','सुर्खेत':'SURKHET',
+  // ── Sudurpaschim Province ──
+  'बाजुरा':'BAJURA','बाझाङ':'BAJHANG','अछाम':'ACHHAM','डोटी':'DOTI',
+  'कैलाली':'KAILALI','कञ्चनपुर':'KANCHANPUR','डडेलधुरा':'DADELDHURA',
+  'बैतडी':'BAITADI','दार्चुला':'DARCHULA',
+};
+
+/** Nepali district name → uppercase English GeoJSON key */
+function districtKey(nepaliName) {
+  if (!nepaliName) return null;
+  // Direct lookup
+  if (DIST_NE_TO_EN[nepaliName]) return DIST_NE_TO_EN[nepaliName];
+  // Partial match
+  for (const [ne, en] of Object.entries(DIST_NE_TO_EN)) {
+    if (nepaliName.includes(ne) || ne.includes(nepaliName)) return en;
+  }
+  // English passthrough (already uppercase)
+  const up = nepaliName.toUpperCase().trim();
+  return up || null;
+}
+
+async function renderMap() {
+  const container = document.getElementById('nepal-map-container');
+  const legEl     = document.getElementById('map-legend');
+  if (!container) return;
+
+  // ── Index allWinners by district key ──
+  // distData[key] = { constituencies: [ {no, name, candidate, party, votes, status} ], partyCount: {} }
+  const distData = {};
+  allWinners.forEach(w => {
+    const key = districtKey(w.district);
+    if (!key) return;
+    if (!distData[key]) distData[key] = { constituencies: [], partyCount: {} };
+    distData[key].constituencies.push(w);
+    const p = w.party || 'Unknown';
+    distData[key].partyCount[p] = (distData[key].partyCount[p] || 0) + 1;
+  });
+
+  // Dominant party per district
+  const distLeader = {};
+  for (const [key, data] of Object.entries(distData)) {
+    const sorted = Object.entries(data.partyCount).sort((a, b) => b[1] - a[1]);
+    distLeader[key] = {
+      party:  sorted[0][0],
+      color:  partyColorMap[sorted[0][0]] || '#3b82f6',
+      total:  data.constituencies.length,
+      sorted,
+    };
+  }
+
+  // ── Load district GeoJSON (cached) ──
+  if (!_nepalDistGeo) {
+    try {
+      const res = await fetch('https://raw.githubusercontent.com/mesaugat/geoJSON-Nepal/master/nepal-districts.geojson');
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      _nepalDistGeo = await res.json();
+    } catch (e) {
+      container.innerHTML = `<div class="no-data" style="height:260px;display:flex;align-items:center;justify-content:center">Map data unavailable — ${e.message}</div>`;
+      return;
+    }
+  }
+
+  // ── D3 render ──
+  const W = container.clientWidth || 860;
+  const H = Math.max(260, Math.round(W * 0.38));
+  container.innerHTML = '';
+
+  const svg = d3.select(container)
+    .append('svg')
+    .attr('width', '100%')
+    .attr('viewBox', `0 0 ${W} ${H}`)
+    .style('display', 'block');
+
+  const projection = d3.geoMercator().fitExtent([[6, 6], [W - 6, H - 6]], _nepalDistGeo);
+  const pathGen    = d3.geoPath(projection);
+
+  // Floating tooltip
+  let mapTip = document.getElementById('map-tooltip');
+  if (!mapTip) {
+    mapTip = document.createElement('div');
+    mapTip.id = 'map-tooltip';
+    mapTip.style.cssText = [
+      'position:fixed','pointer-events:none','z-index:9999','display:none',
+      'background:var(--color-card)','border:1px solid var(--color-bdr)','border-radius:6px',
+      'padding:10px 14px','font-size:.75rem','color:var(--color-text)','min-width:200px','max-width:280px',
+      'box-shadow:0 4px 16px rgba(0,0,0,.5)',
+    ].join(';');
+    document.body.appendChild(mapTip);
+  }
+
+  svg.selectAll('path.dist')
+    .data(_nepalDistGeo.features)
+    .join('path')
+    .attr('class', 'dist')
+    .attr('d', pathGen)
+    .attr('fill', d => {
+      const key    = d.properties.DISTRICT;
+      const leader = distLeader[key];
+      return leader ? leader.color : '#1e3050';
+    })
+    .attr('fill-opacity', d => distLeader[d.properties.DISTRICT] ? 0.75 : 0.2)
+    .attr('stroke', '#0b0f1a')
+    .attr('stroke-width', 0.7)
+    .style('cursor', 'pointer')
+    .on('mousemove', function(event, d) {
+      const key     = d.properties.DISTRICT;
+      const data    = distData[key];
+      const leader  = distLeader[key];
+      const distEn  = key ? key.charAt(0) + key.slice(1).toLowerCase() : 'Unknown';
+
+      let html = `<div style="font-weight:600;font-size:.82rem;color:#93c5fd;margin-bottom:6px">${distEn}</div>`;
+
+      if (data) {
+        // Per-constituency rows
+        const sorted = [...data.constituencies].sort((a, b) => (a.constituency_no||0) - (b.constituency_no||0));
+        sorted.forEach(w => {
+          const c     = partyColorMap[w.party] || '#64748b';
+          const short = (w.party||'').length > 26 ? (w.party||'').slice(0,26)+'…' : (w.party||'—');
+          const votes = w.votes ? Number(w.votes).toLocaleString() : '';
+          html += `<div style="padding:5px 0;border-bottom:1px solid var(--color-bdr)">
+            <div style="font-size:.72rem;color:#6b7280;margin-bottom:2px">No. ${w.constituency_no||'?'} · ${w.constituency||'—'}</div>
+            <div style="display:flex;align-items:center;gap:5px">
+              <div style="width:7px;height:7px;border-radius:50%;background:${c};flex-shrink:0"></div>
+              <span style="font-weight:600;flex:1;color:var(--color-text)">${w.candidate||'—'}</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;margin-top:2px;font-size:.68rem;color:#6b7280">
+              <span style="color:${c}">${short}</span>
+              <span>${votes}</span>
+            </div>
+          </div>`;
+        });
+        html += `<div style="margin-top:5px;font-size:.68rem;color:#64748b">${data.constituencies.length} constituency result${data.constituencies.length>1?'s':''} declared</div>`;
+      } else {
+        html += '<div style="color:#64748b;font-size:.76rem">No results declared yet</div>';
+      }
+
+      mapTip.innerHTML = html;
+      mapTip.style.display = 'block';
+      const tx = Math.min(event.clientX + 14, window.innerWidth  - 295);
+      const ty = Math.min(event.clientY - 12, window.innerHeight - 320);
+      mapTip.style.left = tx + 'px';
+      mapTip.style.top  = ty + 'px';
+
+      d3.select(this).attr('fill-opacity', 1).attr('stroke', '#4d9efa').attr('stroke-width', 1.5);
+    })
+    .on('mouseleave', function(event, d) {
+      const key = d.properties.DISTRICT;
+      d3.select(this)
+        .attr('fill-opacity', distLeader[key] ? 0.75 : 0.2)
+        .attr('stroke', '#0b0f1a')
+        .attr('stroke-width', 0.7);
+      mapTip.style.display = 'none';
+    });
+
+  // ── Legend row ──
+  if (legEl) {
+    const seen = new Map();
+    Object.values(distLeader).forEach(l => {
+      if (!seen.has(l.party)) seen.set(l.party, { color: l.color, districts: 0, seats: 0 });
+      seen.get(l.party).districts++;
+      seen.get(l.party).seats += l.total;
+    });
+    const legendArr = [...seen.entries()].sort((a, b) => b[1].seats - a[1].seats);
+    legEl.innerHTML = legendArr.map(([party, info]) => `
+      <div style="display:flex;align-items:center;gap:5px;font-size:.68rem;color:#6b7280;white-space:nowrap">
+        <div style="width:9px;height:9px;border-radius:50%;flex-shrink:0;background:${info.color}"></div>
+        <span>${party.length > 28 ? party.slice(0,28)+'…' : party}</span>
+        <span style="font-weight:700;color:${info.color}">${info.seats}</span>
+        <span style="font-size:.62rem;color:#4b5563">(${info.districts} dist.)</span>
+      </div>`).join('');
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  UI helpers
+// ════════════════════════════════════════════════════════════════════
+function setStatus(type, text) {
+  const dot = document.getElementById("status-dot");
+  const base = 'w-1.5 h-1.5 rounded-full';
+  if (type === 'ok')      dot.className = base + ' bg-green-500';
+  else if (type === 'error')   dot.className = base + ' bg-red-500';
+  else                         dot.className = base + ' bg-amber-500 status-loading';
+  document.getElementById("status-text").textContent = text;
+}
+
+function showToast(msg, isErr = false) {
+  const t = document.getElementById("toast");
+  t.textContent = msg;
+  t.style.color  = isErr ? '#f87171' : '#4ade80';
+  t.style.borderColor = isErr ? '#3b1c1c' : '#1d3a1d';
+  t.classList.remove('hidden');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.add('hidden'), 3500);
+}
+
+// Progress bar
+function startProgressBar() {
+  const b = document.getElementById("progress-bar");
+  b.style.transition = "none"; b.style.width = "0%";
+  requestAnimationFrame(() => {
+    b.style.transition = "width 1.5s ease"; b.style.width = "85%";
+  });
+}
+function endProgressBar() {
+  const b = document.getElementById("progress-bar");
+  b.style.transition = "width .3s"; b.style.width = "100%";
+  setTimeout(() => { b.style.transition = "none"; b.style.width = "0%"; }, 400);
+}
+
+// Countdown
+function updateCountdown() {
+  if (!nextAt) return;
+  const secs = Math.max(0, Math.round((nextAt - Date.now()) / 1000));
+  const m = String(Math.floor(secs / 60)).padStart(2, "0");
+  const s = String(secs % 60).padStart(2, "0");
+  document.getElementById("countdown").textContent = `${m}:${s}`;
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Popular Politicians Spotlight
+// ════════════════════════════════════════════════════════════════════
+
+// Curated watchlist — each entry has:
+//   label  : display name (English)
+//   nameNe : exact Nepali name (or fragment) matched directly against the candidate field
+const WATCHLIST = [
+//   { label: "KP Sharma Oli",            nameNe: "केपी शर्मा ओली" },
+//   { label: "Sher Bahadur Deuba",       nameNe: "शेरबहादुर देउबा" },
+//   { label: "Pushpa Kamal Dahal",       nameNe: "पुष्पकमल दाहाल" },
+//   { label: "Rabi Lamichhane",          nameNe: "रबि लामिछाने" },
+//   { label: "Gagan Thapa",              nameNe: "गगन थापा" },
+  { label: "Balen Shah",               nameNe: "वालेन्द्र शाह" },
+//   { label: "Madhav Kumar Nepal",       nameNe: "माधव कुमार नेपाल" },
+//   { label: "Birodh Khatiwada",         nameNe: "विरोध खतिवडा" },
+//   { label: "Minendra Rijal",           nameNe: "मिनेन्द्र रिजाल" },
+//   { label: "Prem Suwal",               nameNe: "प्रेम सुवाल" },
+//   { label: "Durga Prasad Bhattarai",   nameNe: "दुर्गाप्रसाद भट्टराई" },
+//   { label: "Rekha Sharma",             nameNe: "रेखा शर्मा" },
+];
+
+let polTab = 'watchlist';
+
+function switchPolTab(tab) {
+  polTab = tab;
+  const activeClass   = 'px-2.5 py-1 rounded-md border text-[0.67rem] border-blue-500 bg-blue-500/20 text-blue-400 cursor-pointer';
+  const inactiveClass = 'px-2.5 py-1 rounded-md border text-[0.67rem] border-bdr text-gray-500 hover:bg-dim cursor-pointer';
+  document.getElementById('pol-tab-watchlist').className = tab === 'watchlist' ? activeClass : inactiveClass;
+  document.getElementById('pol-tab-top').className       = tab === 'top'       ? activeClass : inactiveClass;
+  renderPoliticiansBox();
+}
+
+/** Stable compound key: constituency_no + district so province-5 of Jhapa ≠ province-5 of Kaski. */
+function constKey(w) {
+  return String(w.constituency_no || w.constituency || '?') + '|' + (w.district || w.province || '');
+}
+
+/** Group allWinners by compound key, sorted by votes desc within each group. */
+function getConstituencyGroups() {
+  const groups = {};
+  allWinners.forEach(w => {
+    const key = constKey(w);
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(w);
+  });
+  Object.values(groups).forEach(arr => arr.sort((a, b) => (b.votes || 0) - (a.votes || 0)));
+  return groups;
+}
+
+/** Placeholder card for watchlist politicians not yet in declared results. */
+function renderPlaceholderCard(label) {
+  return `
+    <div style="background:var(--color-surface);border:1px dashed var(--color-bdr);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:12px;opacity:.7">
+      <div style="width:46px;height:46px;border-radius:50%;background:var(--color-dim);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.3rem">🕐</div>
+      <div>
+        <div style="font-size:.6rem;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Watchlist</div>
+        <div style="font-size:.82rem;font-weight:700;color:var(--color-text)">${label}</div>
+        <div style="font-size:.7rem;color:#6b7280;margin-top:3px">Not yet in declared results</div>
+      </div>
+    </div>`;
+}
+
+/** Render one politician card. status = 'won' | 'lost' | 'leading' | 'unknown' */
+function renderPoliticianCard(cand, allInConst, watchLabel, status) {
+  const color  = partyColorMap[cand.party] || '#64748b';
+  const votes  = cand.votes ? Number(cand.votes).toLocaleString() : '—';
+
+  const BADGE = {
+    won:     `<span style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e55;padding:1px 8px;border-radius:10px;font-size:.62rem;font-weight:700;white-space:nowrap">✔ WON</span>`,
+    lost:    `<span style="background:#ef444422;color:#ef4444;border:1px solid #ef444455;padding:1px 8px;border-radius:10px;font-size:.62rem;font-weight:700;white-space:nowrap">✘ LOST</span>`,
+    leading: `<span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b55;padding:1px 8px;border-radius:10px;font-size:.62rem;font-weight:700;white-space:nowrap">▲ LEADING</span>`,
+    unknown: `<span style="background:#94a3b822;color:#94a3b8;border:1px solid #94a3b855;padding:1px 8px;border-radius:10px;font-size:.62rem;font-weight:700;white-space:nowrap">— RESULT</span>`,
+  };
+  const statusBadge = BADGE[status] || BADGE.unknown;
+
+  const partyShort = (cand.party || '').length > 24 ? (cand.party || '').slice(0, 24) + '…' : (cand.party || '—');
+  const constShort = (cand.constituency || '').length > 28 ? (cand.constituency || '').slice(0, 28) + '…' : (cand.constituency || '—');
+
+  // Opponent rows — all other candidates from the same constituency
+  const winner = allInConst[0]; // sorted by votes, so [0] has the most
+  const opponentRows = allInConst
+    .filter(c => c !== cand)
+    .map(op => {
+      const oc      = partyColorMap[op.party] || '#64748b';
+      const ov      = op.votes ? Number(op.votes).toLocaleString() : '—';
+      const opShort = (op.party || '').length > 22 ? (op.party || '').slice(0, 22) + '…' : (op.party || '—');
+      const margin  = (winner && winner.votes && op.votes)
+        ? `<span style="color:#6b7280;font-size:.6rem"> −${Number(winner.votes - op.votes).toLocaleString()}</span>`
+        : '';
+      return `
+        <div style="display:flex;align-items:center;gap:7px;padding:4px 0;border-top:1px solid var(--color-bdr)">
+          ${op.candidateId
+            ? `<img style="width:26px;height:26px;border-radius:50%;object-fit:cover;background:var(--color-card);flex-shrink:0;border:1px solid ${oc}55" src="https://result.election.gov.np/Images/Candidate/${op.candidateId}.jpg" alt="" loading="lazy" onerror="this.style.display='none'">`
+            : `<div style="width:26px;height:26px;border-radius:50%;background:var(--color-dim);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.8rem">👤</div>`}
+          <div style="flex:1;min-width:0;overflow:hidden">
+            <div style="font-size:.72rem;font-weight:600;color:var(--color-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${op.candidate || '—'}</div>
+            <div style="font-size:.62rem;color:${oc}">${opShort}</div>
+          </div>
+          <div style="text-align:right;flex-shrink:0;font-size:.7rem">
+            <span style="color:#93c5fd;font-weight:600">${ov}</span>${margin}
+          </div>
+        </div>`;
+    }).join('');
+
+  return `
+    <div style="background:var(--color-surface);border:1px solid var(--color-bdr);border-radius:10px;padding:12px 14px;display:flex;flex-direction:column;gap:7px;transition:box-shadow .15s" onmouseenter="this.style.boxShadow='0 0 0 1px ${color}55'" onmouseleave="this.style.boxShadow='none'">
+      <!-- Header row -->
+      <div style="display:flex;align-items:flex-start;gap:10px">
+        <!-- Photo -->
+        ${cand.candidateId
+          ? `<img style="width:46px;height:46px;border-radius:50%;object-fit:cover;background:var(--color-card);flex-shrink:0;border:2px solid ${color}55" src="https://result.election.gov.np/Images/Candidate/${cand.candidateId}.jpg" alt="" loading="lazy" onerror="this.style.display='none'">`
+          : `<div style="width:46px;height:46px;border-radius:50%;background:var(--color-dim);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:1.4rem;border:2px solid ${color}44">👤</div>`}
+        <!-- Name / meta -->
+        <div style="flex:1;min-width:0">
+          ${watchLabel ? `<div style="font-size:.6rem;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:1px">${watchLabel}</div>` : ''}
+          <div style="font-size:.82rem;font-weight:700;color:var(--color-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${cand.candidate || ''}">${cand.candidate || '—'}</div>
+          <div style="display:flex;align-items:center;gap:5px;margin-top:3px;flex-wrap:wrap">
+            ${cand.symbolId ? `<img style="width:18px;height:18px;border-radius:3px;object-fit:contain;background:rgba(255,255,255,.08);flex-shrink:0" src="https://result.election.gov.np/Images/symbol-hor-pa/${cand.symbolId}.jpg" alt="" loading="lazy" onerror="this.style.display='none'">` : ''}
+            <span style="background:${color}22;color:${color};border:1px solid ${color}44;padding:1px 6px;border-radius:10px;font-size:.62rem;font-weight:600">${partyShort}</span>
+          </div>
+          <div style="font-size:.65rem;color:#6b7280;margin-top:3px">📍 ${constShort}${cand.district ? ' · ' + cand.district : ''}</div>
+        </div>
+        <!-- Badge + votes -->
+        <div style="text-align:right;flex-shrink:0;display:flex;flex-direction:column;align-items:flex-end;gap:4px">
+          ${statusBadge}
+          <div style="font-size:.95rem;font-weight:700;color:#93c5fd;line-height:1">${votes}</div>
+          <div style="font-size:.6rem;color:#6b7280">votes</div>
+        </div>
+      </div>
+      <!-- Opponents -->
+      ${opponentRows ? `
+        <div style="border-top:1px solid var(--color-bdr);padding-top:6px">
+          <div style="font-size:.6rem;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Top Opponents in Constituency</div>
+          ${opponentRows}
+        </div>` : `
+        <div style="border-top:1px solid var(--color-bdr);padding-top:6px" data-opponents-loading>
+          <div style="font-size:.62rem;color:#6b7280">⏳ Loading opponents…</div>
+        </div>`}
+    </div>`;
+}
+
+/**
+ * Match a watchlist entry against a winner row.
+ * Matches if the candidate field contains the nameNe string exactly.
+ */
+function watchlistMatch(pol, w) {
+  return pol.nameNe && (w.candidate || '').includes(pol.nameNe);
+}
+
+function renderPoliticiansBox() {
+  const grid = document.getElementById('politicians-grid');
+  if (!grid) return;
+  if (!allWinners.length) {
+    grid.innerHTML = `
+      <div class="skeleton h-[130px]"></div>
+      <div class="skeleton h-[130px]"></div>
+      <div class="skeleton h-[130px]"></div>
+      <div class="skeleton h-[130px]"></div>`;
+    return;
+  }
+
+  const constGroups = getConstituencyGroups();
+
+  /** Get the best available candidate list for a constituency:
+   *  - central index (all candidates, instant) if loaded
+   *  - otherwise the winners-only group */
+  function bestGroup(cand) {
+    const key = String(cand.constituency_no || '');
+    if (key && constCandsByNo[key] && constCandsByNo[key].length > 0) {
+      return constCandsByNo[key];
+    }
+    return constGroups[constKey(cand)] || [cand];
+  }
+
+  let cards = [];
+
+  if (polTab === 'watchlist') {
+    const seen = new Set();
+    WATCHLIST.forEach(pol => {
+      const match = allWinners.find(w => watchlistMatch(pol, w));
+      if (match) {
+        const id = match.candidateId || match.candidate;
+        if (!seen.has(id)) {
+          seen.add(id);
+          const group  = bestGroup(match);
+          const status = (match.votes && match.votes > 0) ? 'won' : 'leading';
+          cards.push({ cand: match, group, label: pol.label, found: true, status });
+        }
+      } else {
+        cards.push({ cand: null, group: [], label: pol.label, found: false, status: 'unknown' });
+      }
+    });
+  } else {
+    const sorted = [...allWinners].sort((a, b) => (b.votes || 0) - (a.votes || 0)).slice(0, 12);
+    sorted.forEach(cand => {
+      const group = bestGroup(cand);
+      cards.push({ cand, group, label: null, found: true, status: 'won' });
+    });
+  }
+
+  // Assign stable dom ids so we can patch individual cards
+  cards.forEach((c, i) => { c._domId = `pol-card-${i}`; });
+
+  grid.innerHTML = cards.map(({ cand, group, label, found, status, _domId }) => {
+    const inner = found ? renderPoliticianCard(cand, group, label, status) : renderPlaceholderCard(label);
+    return `<div id="${_domId}">${inner}</div>`;
+  }).join('');
+
+  // If central data isn't loaded yet, patch cards once it arrives
+  if (Object.keys(constCandsByNo).length === 0) {
+    cards.forEach(({ cand, found, label, status, _domId }) => {
+      if (!found || !cand) return;
+      fetchConstCandidates(cand.constituency_no, cand).then(fetched => {
+        const slot = document.getElementById(_domId);
+        if (!slot || !fetched || fetched.length < 1) {
+          const loadingEl = slot?.querySelector('[data-opponents-loading]');
+          if (loadingEl) loadingEl.innerHTML = '<div style="font-size:.62rem;color:#6b7280">— Opponent data unavailable</div>';
+          return;
+        }
+        const candInFetch = fetched.find(f =>
+          (cand.candidateId && f.candidateId && String(f.candidateId) === String(cand.candidateId)) ||
+          (f.candidate || '').trim() === (cand.candidate || '').trim()
+        ) || cand;
+        slot.innerHTML = renderPoliticianCard(candInFetch, fetched, label, status);
+      });
+    });
+  }
+}
+
+// ════════════════════════════════════════════════════════════════════
+//  Bootstrap
+// ════════════════════════════════════════════════════════════════════
+setInterval(fetchAll,         INTERVAL);
+setInterval(updateCountdown,  1000);
+fetchAll();   // immediate first load
+</script>
+</body>
+</html>

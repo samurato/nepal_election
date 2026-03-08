@@ -1,0 +1,76 @@
+name: Fetch Election Data
+
+# ── Triggers ──────────────────────────────────────────────────────────────────
+on:
+  schedule:
+    # Run every 10 minutes.  GitHub Actions clock has ~1-3 min latency in practice.
+    - cron: "*/10 * * * *"
+  # Allow a manual run from the Actions tab at any time.
+  workflow_dispatch:
+
+# ── Permissions ───────────────────────────────────────────────────────────────
+permissions:
+  contents: write   # needed to commit + push updated data files
+
+# ── Job ───────────────────────────────────────────────────────────────────────
+jobs:
+  fetch-and-commit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      # 1. Check out the repo
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # Use the built-in token so the push is authenticated.
+          token: ${{ secrets.GITHUB_TOKEN }}
+          # Fetch minimal history — we only need to commit, not diff the full log.
+          fetch-depth: 1
+
+      # 2. Python runtime
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      # 3. Dependencies
+      - name: Install Python dependencies
+        run: pip install -r requirements.txt
+
+      # 4. Fetch election data — script exits 0 if anything changed, 1 if no change, 2 on total failure
+      - name: Fetch election data
+        id: fetch
+        run: |
+          python scripts/fetch_election_data.py
+          CODE=$?
+          if   [ $CODE -eq 0 ]; then echo "status=changed"   >> "$GITHUB_OUTPUT"
+          elif [ $CODE -eq 1 ]; then echo "status=unchanged" >> "$GITHUB_OUTPUT"
+          else                       echo "status=failed"    >> "$GITHUB_OUTPUT"
+          fi
+          # Propagate only a hard failure (exit 2) back to the runner
+          [ $CODE -ne 2 ]
+
+      # 5. Commit + push ONLY when files actually changed
+      - name: Commit updated data
+        if: steps.fetch.outputs.status == 'changed'
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/
+          git commit -m "data: update election results [$(date -u '+%Y-%m-%d %H:%M UTC')]"
+          git push
+
+      # 6. Human-readable summary in the Actions log
+      - name: Summary
+        if: always()
+        run: |
+          STATUS="${{ steps.fetch.outputs.status }}"
+          case "$STATUS" in
+            changed)   echo "### ✅ data.json updated and pushed to GitHub Pages" ;;
+            unchanged) echo "### ℹ️ No changes detected — nothing to commit"        ;;
+            failed)    echo "### ❌ All fetches failed — upstream may be down"       ;;
+            *)         echo "### ⚠️ Unknown status: $STATUS"                         ;;
+          esac >> "$GITHUB_STEP_SUMMARY"
