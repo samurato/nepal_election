@@ -560,43 +560,6 @@ function buildSearchKey(w) {
   return (nepali + " " + roman + " " + phonetic).toLowerCase();
 }
 
-// Mapper for the rich per-file JSON format (winners + per-constituency files)
-function mapCandidate(d) {
-  return {
-    constituency_no: d.ScConstId || d.ConstNo || d.ConstId || d.ConstituencyNo || d.HoRConstId || d.ConsNo,
-    constituency:    (d.ConstName || d.ScConstName || d.ConstituencyName || '').replace(/^प्रतिनिधि सभा सदस्य निर्वाचन क्षेत्र\s*/u, '').trim(),
-    district:        d.DistrictName,
-    province:        d.StateName,
-    candidate:       d.CandidateName,
-    party:           d.PartyName || d.PoliticalPartyName,
-    votes:           d.TotalVote || 0,
-    symbolId:        d.SymbolId  || d.SymbolID,
-    candidateId:     d.CandidateId,
-  };
-}
-
-/**
- * Mapper for the central jqGrid response.
- * cell[] order: [province, district, constNo, name, gender, party, symbol, votes, status]
- */
-function mapCentralRow(row) {
-  const c = row.cell || [];
-  return {
-    province:        c[0] || '',
-    district:        c[1] || '',
-    constituency_no: c[2] || '',
-    candidate:       c[3] || '',
-    gender:          c[4] || '',
-    party:           c[5] || '',
-    symbol:          c[6] || '',
-    votes:           parseInt(c[7], 10) || 0,
-    elected:         (c[8] || '').trim() === 'Elected',
-    constituency:    '',   // patched from allWinners after load
-    candidateId:     null, // patched from allWinners after load
-    symbolId:        null, // patched from allWinners after load
-  };
-}
-
 // ════════════════════════════════════════════════════════════════════
 //  Per-constituency candidate index (built from the central dataset)
 // ════════════════════════════════════════════════════════════════════
@@ -664,7 +627,7 @@ async function fetchAll() {
   setStatus("loading", "Fetching…");
   startProgressBar();
   try {
-    const res = await fetch(DATA_URL);
+    const res = await fetch(DATA_URL, { cache: 'no-cache' });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
 
@@ -1513,26 +1476,6 @@ function renderPoliticiansBox() {
     const inner = found ? renderPoliticianCard(cand, group, label, status) : renderPlaceholderCard(label);
     return `<div id="${_domId}">${inner}</div>`;
   }).join('');
-
-  // If central data isn't loaded yet, patch cards once it arrives
-  if (Object.keys(constCandsByNo).length === 0) {
-    cards.forEach(({ cand, found, label, status, _domId }) => {
-      if (!found || !cand) return;
-      fetchConstCandidates(cand.constituency_no, cand).then(fetched => {
-        const slot = document.getElementById(_domId);
-        if (!slot || !fetched || fetched.length < 1) {
-          const loadingEl = slot?.querySelector('[data-opponents-loading]');
-          if (loadingEl) loadingEl.innerHTML = '<div style="font-size:.62rem;color:#6b7280">— Opponent data unavailable</div>';
-          return;
-        }
-        const candInFetch = fetched.find(f =>
-          (cand.candidateId && f.candidateId && String(f.candidateId) === String(cand.candidateId)) ||
-          (f.candidate || '').trim() === (cand.candidate || '').trim()
-        ) || cand;
-        slot.innerHTML = renderPoliticianCard(candInFetch, fetched, label, status);
-      });
-    });
-  }
 }
 
 // ════════════════════════════════════════════════════════════════════
