@@ -164,7 +164,10 @@
       <div id="status-dot" class="w-1.5 h-1.5 rounded-full bg-amber-500 status-loading"></div>
       <span id="status-text">Connecting…</span>
     </div>
-    <div class="bg-card border border-bdr px-3 py-1 rounded-md text-gray-500">Updated <span id="last-updated" class="text-[#cdd0d6] font-semibold">—</span></div>
+    <div class="bg-card border border-bdr px-3 py-1 rounded-md text-gray-500">UI Refreshed <span id="last-updated" class="text-[#cdd0d6] font-semibold">—</span></div>
+    <button type="button" aria-disabled="true" class="bg-card border border-bdr px-3 py-1 rounded-md text-gray-500 text-xs cursor-default">
+      Data Refreshed <span id="data-updated-at-top" class="text-[#cdd0d6] font-semibold">—</span>
+    </button>
     <div class="bg-card border border-bdr px-3 py-1 rounded-md text-gray-500">Next in <span id="countdown" class="text-[#cdd0d6] font-semibold">—</span></div>
     <button class="bg-card border border-bdr text-[#cdd0d6] rounded-md px-3 py-1.5 cursor-pointer hover:bg-dim transition-colors" onclick="fetchAll()">↻ Refresh Now</button>
     <button id="theme-toggle" title="Toggle light / dark mode" onclick="toggleTheme()">🌙</button>
@@ -261,6 +264,38 @@
       </div>
     </div>
 
+  </div>
+
+  <!-- Leading Constituency Analytics -->
+  <div class="bg-card border border-bdr rounded-lg overflow-hidden mb-5">
+    <div class="px-4 py-3 border-b border-bdr">
+      <h2 class="text-sm font-semibold">Leading Constituencies Analytics — क्षेत्रगत अग्रता विश्लेषण</h2>
+      <p id="const-analytics-count" class="text-[0.7rem] text-gray-500 mt-0.5">Loading constituency leads…</p>
+    </div>
+    <div class="p-4">
+      <div class="bg-surface border border-bdr rounded-md p-3 mb-3">
+        <div class="mb-2 flex items-center justify-between gap-2 flex-wrap">
+          <div class="text-[0.62rem] text-gray-500 uppercase tracking-wide">Constituency Breakdown Cards</div>
+          <div class="flex gap-1.5">
+            <button id="const-sort-closest" onclick="setConstSortMode('closest')"
+              class="px-2.5 py-1 rounded-md border text-[0.67rem] border-blue-500 bg-blue-500/20 text-blue-400 cursor-pointer">Closest Margin</button>
+            <button id="const-sort-votes" onclick="setConstSortMode('votes')"
+              class="px-2.5 py-1 rounded-md border text-[0.67rem] border-bdr text-gray-500 hover:bg-dim cursor-pointer">Highest Lead Votes</button>
+          </div>
+        </div>
+        <div id="const-breakdown-cards" class="grid gap-2" style="grid-template-columns:repeat(5,minmax(0,1fr))">
+          <div class="skeleton h-[132px]"></div>
+          <div class="skeleton h-[132px]"></div>
+          <div class="skeleton h-[132px]"></div>
+          <div class="skeleton h-[132px]"></div>
+          <div class="skeleton h-[132px]"></div>
+          <div class="skeleton h-[132px]"></div>
+          <div class="skeleton h-[132px]"></div>
+          <div class="skeleton h-[132px]"></div>
+        </div>
+        <div id="const-carousel-controls" class="mt-3 hidden"></div>
+      </div>
+    </div>
   </div>
 
   <!-- Nepal Province Map -->
@@ -621,6 +656,7 @@ async function fetchConstCandidates(constNo, candObj) {
 //  Config
 // ════════════════════════════════════════════════════════════════════
 const INTERVAL = 120_000;   // 2 minutes
+const DATA_STALE_MS = 5 * 60 * 1000; // 5 minutes
 // ⚙️  Change this to your GitHub Pages URL once the repo is published.
 // The data/data.json is auto-updated every 10 min by .github/workflows/fetch-election-data.yml
 const DATA_URL = "https://elections.lilapath.com/data/data.json";
@@ -641,6 +677,22 @@ let fetchCount    = 0;
 let nextAt        = null;
 let partyColorMap = {};
 let activePartyFilter = "";
+let constCarouselPage = 0;
+const CONST_CAROUSEL_SIZE = 25;
+let constSortMode = 'closest';
+
+function changeConstCarouselPage(step) {
+  constCarouselPage += step;
+  renderConstituencyAnalytics();
+}
+
+function setConstSortMode(mode) {
+  const next = mode === 'votes' ? 'votes' : 'closest';
+  if (constSortMode === next) return;
+  constSortMode = next;
+  constCarouselPage = 0;
+  renderConstituencyAnalytics();
+}
 
 function getFilteredPartyData() {
   if (!activePartyFilter) return partyData;
@@ -678,6 +730,7 @@ function applyPartyFilter(nextParty, pushHistory = false) {
   const party = String(nextParty || '');
   const changed = party !== activePartyFilter;
   activePartyFilter = party;
+  if (changed) constCarouselPage = 0;
   updatePartyFilterIndicator();
 
   populateFilters();
@@ -685,6 +738,7 @@ function applyPartyFilter(nextParty, pushHistory = false) {
   renderPartyList();
   renderChart();
   renderTable();
+  renderConstituencyAnalytics();
   renderMap();
   renderPoliticiansBox();
 
@@ -707,6 +761,28 @@ window.addEventListener('popstate', (event) => {
   const partyFromHistory = event?.state?.partyFilter || '';
   applyPartyFilter(partyFromHistory, false);
 });
+
+function parseDataUpdatedAt(raw) {
+  if (!raw) return null;
+  const dt = new Date(raw);
+  if (Number.isNaN(dt.getTime())) return null;
+  return dt;
+}
+
+function formatDataUpdatedAtTop(raw) {
+  const dt = parseDataUpdatedAt(raw);
+  if (!dt) return raw || '—';
+  return dt.toLocaleString([], {
+    year: 'numeric', month: 'short', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit'
+  });
+}
+
+function formatDataUpdatedAtTime(raw) {
+  const dt = parseDataUpdatedAt(raw);
+  if (!dt) return '—';
+  return dt.toLocaleTimeString();
+}
 
 // ════════════════════════════════════════════════════════════════════
 //  Data loader — single data.json fetch
@@ -765,14 +841,23 @@ async function fetchAll() {
     renderChart();
     populateFilters();
     renderTable();
+    renderConstituencyAnalytics();
     renderMap();   // async, non-blocking
     renderPoliticiansBox();
 
-    const ts = new Date().toLocaleTimeString();
-    document.getElementById("last-updated").textContent = ts;
+    const topUpdated = formatDataUpdatedAtTop(data.updated_at);
+    const dataTime = formatDataUpdatedAtTime(data.updated_at);
+    const uiTime = new Date().toLocaleTimeString();
+    const dataUpdatedAtDate = parseDataUpdatedAt(data.updated_at);
+    const isDataStale = !dataUpdatedAtDate || (Date.now() - dataUpdatedAtDate.getTime() > DATA_STALE_MS);
+
+    const topUpdatedEl = document.getElementById('data-updated-at-top');
+    if (topUpdatedEl) topUpdatedEl.textContent = topUpdated;
+
+    document.getElementById("last-updated").textContent = uiTime;
     document.getElementById("m-fetch").textContent = fetchCount;
-    setStatus("ok", "Live");
-    showToast(`✓ Updated at ${ts}`);
+    setStatus(isDataStale ? "stale" : "ok", isDataStale ? "Stale" : "Live");
+    showToast(`✓ UI refreshed at ${uiTime}${dataTime !== '—' ? ` · Data: ${dataTime}` : ''}`);
 
   } catch (err) {
     setStatus("error", "Error — retrying in 2 min");
@@ -1141,6 +1226,181 @@ function renderTable() {
   }).join("");
 }
 
+function renderConstituencyAnalytics() {
+  const countEl = document.getElementById('const-analytics-count');
+  const cardsEl = document.getElementById('const-breakdown-cards');
+  const controlsEl = document.getElementById('const-carousel-controls');
+  const sortClosestBtn = document.getElementById('const-sort-closest');
+  const sortVotesBtn = document.getElementById('const-sort-votes');
+  if (!countEl || !cardsEl) return;
+
+  if (sortClosestBtn && sortVotesBtn) {
+    const activeClass = 'px-2.5 py-1 rounded-md border text-[0.67rem] border-blue-500 bg-blue-500/20 text-blue-400 cursor-pointer';
+    const inactiveClass = 'px-2.5 py-1 rounded-md border text-[0.67rem] border-bdr text-gray-500 hover:bg-dim cursor-pointer';
+    sortClosestBtn.className = constSortMode === 'closest' ? activeClass : inactiveClass;
+    sortVotesBtn.className = constSortMode === 'votes' ? activeClass : inactiveClass;
+  }
+
+  const grouped = {};
+  const sourceRows = allCandidates.length ? allCandidates : allWinners;
+  const declaredKeys = new Set();
+
+  allWinners.forEach(w => {
+    const key = constKey(w);
+    if (key) declaredKeys.add(key);
+  });
+
+  allCandidates.forEach(c => {
+    if (c?.elected !== true) return;
+    const key = constKey(c);
+    if (key) declaredKeys.add(key);
+  });
+
+  sourceRows.forEach(c => {
+    const key = constKey(c);
+    if (!key) return;
+    if (!grouped[key]) grouped[key] = [];
+    grouped[key].push(c);
+  });
+
+  let rows = Object.entries(grouped)
+  .filter(([key, group]) => {
+    if (declaredKeys.has(key)) return false;
+    return !group.some(c => c?.elected === true);
+  })
+  .map(([, group]) => {
+    const sorted = [...group].sort((a, b) => (b.votes || 0) - (a.votes || 0));
+    const leader = sorted[0] || null;
+    const runner = sorted[1] || null;
+    const leadVotes = Number(leader?.votes || 0);
+    const runnerVotes = Number(runner?.votes || 0);
+    const margin = Math.max(0, leadVotes - runnerVotes);
+    const isUndecided = !leader || leadVotes <= 0 || margin === 0;
+    return {
+      constituency_no: leader?.constituency_no || 0,
+      constituency: leader?.constituency || '—',
+      district: leader?.district || '—',
+      leaderParty: isUndecided ? 'Undecided' : (leader?.party || '—'),
+      leadVotes,
+      runnerVotes,
+      margin,
+      votesToWin: (!isUndecided && runner) ? margin + 1 : null,
+      isUndecided,
+      topCandidates: sorted.slice(0, 3).map((cand, idx) => ({
+        rank: idx + 1,
+        candidateId: cand?.candidateId || null,
+        candidate: cand?.candidate || '—',
+        party: cand?.party || '—',
+        votes: Number(cand?.votes || 0),
+      })),
+    };
+  });
+
+  if (activePartyFilter) {
+    rows = rows.filter(row => !row.isUndecided && row.leaderParty === activePartyFilter);
+  }
+
+  rows.sort((a, b) => {
+    if (a.isUndecided !== b.isUndecided) return a.isUndecided ? 1 : -1;
+    if (constSortMode === 'votes') {
+      return ((b.leadVotes || 0) - (a.leadVotes || 0)) || (a.margin - b.margin);
+    }
+    return (a.margin - b.margin) || ((b.leadVotes || 0) - (a.leadVotes || 0));
+  });
+
+  const decisiveRows = rows.filter(row => !row.isUndecided);
+  const undecidedCount = rows.length - decisiveRows.length;
+
+  countEl.textContent = `${rows.length} undeclared constituencies tracked${undecidedCount ? ` · ${undecidedCount} undecided` : ''}${activePartyFilter ? ` · ${activePartyFilter}` : ''}`;
+
+  if (!rows.length) {
+    cardsEl.innerHTML = '<div style="grid-column:1/-1;color:#6b7280;font-size:.75rem;padding:2px 0">No undeclared constituency analytics for current filter</div>';
+    if (controlsEl) {
+      controlsEl.classList.add('hidden');
+      controlsEl.innerHTML = '';
+    }
+    return;
+  }
+
+  const totalSlides = Math.max(1, Math.ceil(rows.length / CONST_CAROUSEL_SIZE));
+  if (constCarouselPage < 0) constCarouselPage = totalSlides - 1;
+  if (constCarouselPage >= totalSlides) constCarouselPage = 0;
+
+  const start = constCarouselPage * CONST_CAROUSEL_SIZE;
+  const rowsToRender = rows.slice(start, start + CONST_CAROUSEL_SIZE);
+
+  cardsEl.style.transition = 'opacity .22s ease, transform .22s ease';
+  cardsEl.style.opacity = '0';
+  cardsEl.style.transform = 'translateY(4px)';
+
+  cardsEl.innerHTML = rowsToRender.map((row) => {
+    const color = row.isUndecided ? '#94a3b8' : (partyColorMap[row.leaderParty] || '#64748b');
+    const partyShort = row.isUndecided
+      ? 'Undecided'
+      : (row.leaderParty.length > 26 ? `${row.leaderParty.slice(0, 26)}…` : row.leaderParty);
+    const topThreeHtml = row.topCandidates.length
+      ? row.topCandidates.map(cand => {
+      const candColor = partyColorMap[cand.party] || '#64748b';
+      const candPartyShort = cand.party.length > 18 ? `${cand.party.slice(0, 18)}…` : cand.party;
+      const candNameShort = cand.candidate.length > 20 ? `${cand.candidate.slice(0, 20)}…` : cand.candidate;
+      return `<div style="display:flex;justify-content:space-between;gap:8px;align-items:center;border-top:1px solid var(--color-bdr);padding-top:4px">
+        <div style="display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden">
+          <span style="font-size:.62rem;color:#6b7280;width:14px;flex-shrink:0">${cand.rank}</span>
+          ${cand.candidateId
+            ? `<img style="width:20px;height:20px;border-radius:50%;object-fit:cover;background:var(--color-card);flex-shrink:0;border:1px solid var(--color-bdr)" src="https://result.election.gov.np/Images/Candidate/${cand.candidateId}.jpg" alt="" loading="lazy" onerror="this.style.display='none'">`
+            : `<div style="width:20px;height:20px;border-radius:50%;background:var(--color-dim);flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:.62rem">👤</div>`}
+          <span style="font-size:.64rem;color:var(--color-text);font-weight:${cand.rank === 1 ? 700 : 500};white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${cand.candidate}">${candNameShort}</span>
+          <span style="font-size:.6rem;color:${candColor};white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${cand.party}">${candPartyShort}</span>
+        </div>
+        <span style="font-size:.64rem;color:${cand.rank === 1 ? '#93c5fd' : '#94a3b8'};font-variant-numeric:tabular-nums">${cand.votes ? cand.votes.toLocaleString() : '—'}</span>
+      </div>`;
+    }).join('')
+      : '<div style="font-size:.64rem;color:#6b7280;border-top:1px solid var(--color-bdr);padding-top:4px">No candidate votes yet</div>';
+
+    return `<div style="background:var(--color-card);border:1px solid var(--color-bdr);border-radius:8px;padding:9px 10px;display:flex;flex-direction:column;gap:5px">
+      <div style="display:flex;justify-content:space-between;gap:7px;align-items:flex-start">
+        <div style="min-width:0;overflow:hidden">
+          <div style="font-size:.72rem;font-weight:700;color:var(--color-text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${row.district}">${row.district}</div>
+          <div style="font-size:.64rem;color:#6b7280">${row.constituency_no ? `${row.constituency_no}. ` : ''}${row.constituency}</div>
+        </div>
+        <div style="font-size:.64rem;color:#f59e0b;font-weight:700;white-space:nowrap">± ${row.margin.toLocaleString()}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px">
+        <div style="width:8px;height:8px;border-radius:50%;background:${color};flex-shrink:0"></div>
+        <span style="font-size:.66rem;color:${color};font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${row.leaderParty}">${partyShort}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:.64rem;color:#6b7280;gap:8px">
+        <span>Lead: <strong style="color:#93c5fd">${row.isUndecided ? '—' : row.leadVotes.toLocaleString()}</strong></span>
+        <span>Runner: <strong style="color:var(--color-text)">${row.isUndecided ? '—' : (row.runnerVotes ? row.runnerVotes.toLocaleString() : '—')}</strong></span>
+        <span>To win: <strong style="color:#fca5a5">${row.isUndecided ? '—' : (row.votesToWin ? row.votesToWin.toLocaleString() : '—')}</strong></span>
+      </div>
+      <div style="margin-top:2px;font-size:.6rem;color:#6b7280;text-transform:uppercase;letter-spacing:.04em">Top 3 Candidates</div>
+      ${topThreeHtml}
+    </div>`;
+  }).join('');
+
+  if (controlsEl) {
+    if (rows.length > CONST_CAROUSEL_SIZE) {
+      controlsEl.classList.remove('hidden');
+      controlsEl.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap">
+          <button onclick="changeConstCarouselPage(-1)" class="px-2.5 py-1 rounded-md border text-[0.67rem] border-bdr text-gray-400 hover:bg-dim cursor-pointer">← Prev</button>
+          <span style="font-size:.68rem;color:#6b7280">Slide ${constCarouselPage + 1} / ${totalSlides}</span>
+          <button onclick="changeConstCarouselPage(1)" class="px-2.5 py-1 rounded-md border text-[0.67rem] border-bdr text-gray-400 hover:bg-dim cursor-pointer">Next →</button>
+        </div>`;
+    } else {
+      controlsEl.classList.add('hidden');
+      controlsEl.innerHTML = '';
+    }
+  }
+
+  requestAnimationFrame(() => {
+    cardsEl.style.transition = 'opacity .22s ease, transform .22s ease';
+    cardsEl.style.opacity = '1';
+    cardsEl.style.transform = 'translateY(0)';
+  });
+}
+
 // ════════════════════════════════════════════════════════════════════
 //  Nepal District Map  (D3 + district GeoJSON — near-constituency level)
 // ════════════════════════════════════════════════════════════════════
@@ -1356,6 +1616,7 @@ function setStatus(type, text) {
   const dot = document.getElementById("status-dot");
   const base = 'w-1.5 h-1.5 rounded-full';
   if (type === 'ok')      dot.className = base + ' bg-green-500';
+  else if (type === 'stale') dot.className = base + ' bg-amber-500';
   else if (type === 'error')   dot.className = base + ' bg-red-500';
   else                         dot.className = base + ' bg-amber-500 status-loading';
   document.getElementById("status-text").textContent = text;

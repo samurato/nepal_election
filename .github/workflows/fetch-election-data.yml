@@ -3,8 +3,9 @@ name: Fetch Election Data
 # ── Triggers ──────────────────────────────────────────────────────────────────
 on:
   schedule:
-    # Run every 10 minutes.  GitHub Actions clock has ~1-3 min latency in practice.
-    - cron: "*/5 * * * *"
+    # GitHub schedule is best-effort and may start late; we run a short internal
+    # 2-minute polling loop in each scheduled job to keep effective cadence tighter.
+    - cron: "*/12 * * * *"
   # Allow a manual run from the Actions tab at any time.
   workflow_dispatch:
 
@@ -14,9 +15,9 @@ permissions:
 
 concurrency:
   group: fetch-election-data
-  # Keep only the newest run so scheduled + manual triggers don't build stale queues.
-  # This also avoids older runs pushing outdated data after a newer run already finished.
-  cancel-in-progress: true
+  # Keep runs serialized, but do not cancel in-progress jobs:
+  # canceling can break the internal 2-minute polling cadence mid-cycle.
+  cancel-in-progress: false
 
 # ── Job ───────────────────────────────────────────────────────────────────────
 jobs:
@@ -46,54 +47,58 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
-      # 4. Fetch election data (run 1)
-      - name: Fetch election data (run 1)
-        id: fetch1
-        run: |
-          set +e
-          python scripts/fetch_election_data.py
-          CODE=$?
-          set -e
-          echo "code=$CODE" >> "$GITHUB_OUTPUT"
-
-      # 5. Wait before second run in the same cycle
-      - name: Wait 2 minutes
-        run: sleep 120
-
-      # 6. Fetch election data (run 2)
-      - name: Fetch election data (run 2)
-        id: fetch2
-        run: |
-          set +e
-          python scripts/fetch_election_data.py
-          CODE=$?
-          set -e
-          echo "code=$CODE" >> "$GITHUB_OUTPUT"
-
-      # 7. Combine both run results
-      - name: Evaluate fetch status
+      # 4. Fetch election data repeatedly inside this run to approximate ~2 minute cadence
+      - name: Fetch election data loop
         id: fetch
+        env:
+          BATCH_RUNS: "6"
+          INTERVAL_SECONDS: "120"
         run: |
-          CODE1="${{ steps.fetch1.outputs.code }}"
-          CODE2="${{ steps.fetch2.outputs.code }}"
+          set +e
 
-          echo "run1=$CODE1" >> "$GITHUB_OUTPUT"
-          echo "run2=$CODE2" >> "$GITHUB_OUTPUT"
+          total_runs=0
+          changed_runs=0
+          unchanged_runs=0
+          failed_runs=0
 
-          if [ "$CODE1" = "2" ] && [ "$CODE2" = "2" ]; then
+          for i in $(seq 1 "$BATCH_RUNS"); do
+            echo "Starting fetch run $i/$BATCH_RUNS"
+            python scripts/fetch_election_data.py
+            CODE=$?
+            total_runs=$((total_runs + 1))
+
+            case "$CODE" in
+              0) changed_runs=$((changed_runs + 1)) ;;
+              1) unchanged_runs=$((unchanged_runs + 1)) ;;
+              2) failed_runs=$((failed_runs + 1)) ;;
+              *) failed_runs=$((failed_runs + 1)) ;;
+            esac
+
+            if [ "$i" -lt "$BATCH_RUNS" ]; then
+              echo "Sleeping ${INTERVAL_SECONDS}s before next fetch run..."
+              sleep "$INTERVAL_SECONDS"
+            fi
+          done
+
+          set -e
+
+          echo "total_runs=$total_runs" >> "$GITHUB_OUTPUT"
+          echo "changed_runs=$changed_runs" >> "$GITHUB_OUTPUT"
+          echo "unchanged_runs=$unchanged_runs" >> "$GITHUB_OUTPUT"
+          echo "failed_runs=$failed_runs" >> "$GITHUB_OUTPUT"
+
+          if [ "$failed_runs" -eq "$total_runs" ]; then
             echo "status=failed" >> "$GITHUB_OUTPUT"
             exit 1
-          fi
-
-          if [ "$CODE1" = "0" ] || [ "$CODE2" = "0" ]; then
+          elif [ "$changed_runs" -gt 0 ]; then
             echo "status=changed" >> "$GITHUB_OUTPUT"
-          elif [ "$CODE1" = "1" ] && [ "$CODE2" = "1" ]; then
+          elif [ "$unchanged_runs" -eq "$total_runs" ]; then
             echo "status=unchanged" >> "$GITHUB_OUTPUT"
           else
             echo "status=partial" >> "$GITHUB_OUTPUT"
           fi
 
-      # 8. Commit + push ONLY when files actually changed
+      # 5. Commit + push ONLY when files actually changed
       - name: Commit updated data
         if: steps.fetch.outputs.status != 'failed'
         run: |
@@ -132,21 +137,25 @@ jobs:
           echo "Push failed after 3 attempts."
           exit 1
 
-      # 9. Human-readable summary in the Actions log
+      # 6. Human-readable summary in the Actions log
       - name: Summary
         if: always()
         run: |
           STATUS="${{ steps.fetch.outputs.status }}"
-          RUN1="${{ steps.fetch.outputs.run1 }}"
-          RUN2="${{ steps.fetch.outputs.run2 }}"
+          TOTAL_RUNS="${{ steps.fetch.outputs.total_runs }}"
+          CHANGED_RUNS="${{ steps.fetch.outputs.changed_runs }}"
+          UNCHANGED_RUNS="${{ steps.fetch.outputs.unchanged_runs }}"
+          FAILED_RUNS="${{ steps.fetch.outputs.failed_runs }}"
 
-          echo "- run1 exit code: ${RUN1:-n/a}" >> "$GITHUB_STEP_SUMMARY"
-          echo "- run2 exit code: ${RUN2:-n/a}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- total runs: ${TOTAL_RUNS:-n/a}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- changed runs: ${CHANGED_RUNS:-n/a}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- unchanged runs: ${UNCHANGED_RUNS:-n/a}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- failed runs: ${FAILED_RUNS:-n/a}" >> "$GITHUB_STEP_SUMMARY"
 
           case "$STATUS" in
             changed)   echo "### ✅ data.json updated and pushed to GitHub Pages" ;;
             unchanged) echo "### ℹ️ No changes detected — nothing to commit"        ;;
-            partial)   echo "### ⚠️ Partial success — one run had issues"           ;;
-            failed)    echo "### ❌ Both runs failed — upstream may be down"        ;;
+            partial)   echo "### ⚠️ Partial success — some runs had issues"         ;;
+            failed)    echo "### ❌ All runs failed — upstream may be down"         ;;
             *)         echo "### ⚠️ Unknown status: $STATUS"                        ;;
           esac >> "$GITHUB_STEP_SUMMARY"
