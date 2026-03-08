@@ -2317,6 +2317,47 @@ function renderPoliticiansBox() {
     return constGroups[constKey(cand)] || [cand];
   }
 
+  function isSameCandidate(a, b) {
+    if (!a || !b) return false;
+    if (a.candidateId && b.candidateId) return String(a.candidateId) === String(b.candidateId);
+    return (a.candidate || '') === (b.candidate || '') && (a.party || '') === (b.party || '');
+  }
+
+  // Status rule:
+  // - LOST only if another candidate is elected in the same province+district+constituency.
+  // - Otherwise LEADING if this candidate tops current votes in that constituency.
+  // - Otherwise NOT DECLARED.
+  function deriveSpotlightStatus(cand, fallbackGroup) {
+    if (!cand) return 'unknown';
+
+    const key = constituencyKey(cand);
+    let allInConst = [];
+
+    if (key && constCandsByNo[key] && constCandsByNo[key].length > 0) {
+      allInConst = constCandsByNo[key];
+    } else if (key) {
+      allInConst = allCandidates.filter(c => constituencyKey(c) === key);
+    } else {
+      const looseKey = constKey(cand);
+      allInConst = allCandidates.filter(c => constKey(c) === looseKey);
+    }
+
+    if (!allInConst.length) allInConst = Array.isArray(fallbackGroup) ? fallbackGroup : [cand];
+
+    const electedInConst = allInConst.find(c => c?.elected === true);
+    if (electedInConst) {
+      return isSameCandidate(cand, electedInConst) ? 'won' : 'lost';
+    }
+
+    const leader = [...allInConst].sort((a, b) => (b?.votes || 0) - (a?.votes || 0))[0];
+    const hasVotes = Number(leader?.votes || 0) > 0;
+    if (leader && hasVotes && isSameCandidate(cand, leader)) {
+      return 'leading';
+    }
+
+    return 'unknown';
+  }
+
   let cards = [];
   let cardsToRender = [];
 
@@ -2331,12 +2372,7 @@ function renderPoliticiansBox() {
         if (!seen.has(id)) {
           seen.add(id);
           const group  = bestGroup(match);
-          let status = 'unknown';
-          if (winnerMatch) {
-            status = 'won';
-          } else if (typeof match.elected === 'boolean') {
-            status = match.elected ? 'won' : 'lost';
-          }
+          const status = winnerMatch ? 'won' : deriveSpotlightStatus(match, group);
           cards.push({ cand: match, group, label: pol.label, found: true, status, _watchOrder: idx });
         }
       } else {
