@@ -210,6 +210,18 @@
     }
     #theme-toggle:hover { background:var(--color-dim); }
 
+    /* Keep live/status controls in a single row on narrow screens */
+    #header-live-controls {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: nowrap;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    #header-live-controls::-webkit-scrollbar { display: none; }
+    #header-live-controls > * { flex-shrink: 0; }
+
     /* Fix input/select colours in light mode */
     [data-theme="light"] input, [data-theme="light"] select {
       background: var(--color-input-bg) !important;
@@ -246,7 +258,7 @@
       <p class="text-[0.65rem] text-gray-500 mt-0.5">🇳🇵 प्रतिनिधि सभा निर्वाचन २०८२ · Live FPTP Results · Auto-refreshes every 2 min</p>
     </div>
   </div>
-  <div class="flex items-center gap-3 text-xs flex-wrap">
+  <div id="header-live-controls" class="flex items-center gap-3 text-xs flex-nowrap">
     <div class="flex items-center gap-2 bg-card border border-bdr px-3 py-1 rounded-md">
       <div id="status-dot" class="w-1.5 h-1.5 rounded-full bg-amber-500 status-loading"></div>
       <span id="status-text">Connecting…</span>
@@ -310,7 +322,7 @@
       <div class="px-4 py-3 border-b border-bdr flex items-center justify-between">
         <div>
           <h2 class="text-sm font-semibold">Party-wise Seat Tally — दलगत स्थिति</h2>
-          <p class="text-[0.7rem] text-gray-500 mt-0.5">FPTP constituencies · Won + Leading</p>
+          <p id="party-list-subtitle" class="text-[0.7rem] text-gray-500 mt-0.5">FPTP constituencies · Won + Leading</p>
           <button id="party-filter-indicator" type="button" onclick="clearPartyFilterFromIndicator()" class="text-[0.65rem] text-blue-400 mt-1 hidden hover:underline cursor-pointer" title="Clear selected party filter"></button>
         </div>
         <div class="flex gap-3.5 text-[0.67rem] text-gray-500">
@@ -323,6 +335,11 @@
           <div class="skeleton h-[42px] mb-2.5"></div>
           <div class="skeleton h-[42px] mb-2.5"></div>
           <div class="skeleton h-[30px]"></div>
+        </div>
+        <div id="party-list-controls" class="mt-2 flex items-center justify-between gap-2">
+          <button id="party-list-prev-btn" onclick="changePartyVoteCarousel(-1)" class="bg-surface border border-bdr text-[#cdd0d6] rounded-md px-2.5 py-1 text-[0.67rem] cursor-pointer hover:bg-dim transition-colors">← Prev View</button>
+          <span id="party-list-view-label" class="text-[0.65rem] text-gray-500">View: Constituency Votes</span>
+          <button id="party-list-next-btn" onclick="changePartyVoteCarousel(1)" class="bg-surface border border-bdr text-[#cdd0d6] rounded-md px-2.5 py-1 text-[0.67rem] cursor-pointer hover:bg-dim transition-colors">Next View →</button>
         </div>
         <!-- Majority progress -->
         <div class="mt-3.5">
@@ -782,9 +799,11 @@ let fetchCount    = 0;
 let nextAt        = null;
 let partyColorMap = {};
 let activePartyFilter = "";
+let partyListView = 'constVotes';
 let constCarouselPage = 0;
 const CONST_CAROUSEL_SIZE = 25;
 let constSortMode = 'closest';
+const PARTY_LIST_VIEWS = ['constVotes', 'prVotes'];
 
 // Responsive carousel sizes
 function getConstCarouselSize() {
@@ -869,6 +888,15 @@ function handlePartyBarClick(partyName) {
 
 function handlePartyFilterChange(partyName) {
   applyPartyFilter(partyName || '', true);
+}
+
+function changePartyVoteCarousel(step) {
+  const total = PARTY_LIST_VIEWS.length;
+  const idx = PARTY_LIST_VIEWS.indexOf(partyListView);
+  const base = idx >= 0 ? idx : 0;
+  const next = (base + step + total) % total;
+  partyListView = PARTY_LIST_VIEWS[next];
+  renderPartyList();
 }
 
 window.addEventListener('popstate', (event) => {
@@ -1010,37 +1038,128 @@ function updateMetrics() {
 // ════════════════════════════════════════════════════════════════════
 function renderPartyList() {
   const el = document.getElementById("party-list");
+  const subtitleEl = document.getElementById('party-list-subtitle');
+  const viewLabelEl = document.getElementById('party-list-view-label');
+  const prevBtnEl = document.getElementById('party-list-prev-btn');
+  const nextBtnEl = document.getElementById('party-list-next-btn');
   const scopedPartyData = getFilteredPartyData();
-  if (!scopedPartyData.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;font-size:.85rem">No data</div>'; return; }
+  if (!scopedPartyData.length) {
+    el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;font-size:.85rem">No data</div>';
+    if (subtitleEl) subtitleEl.textContent = 'Party vote analytics';
+    if (viewLabelEl) viewLabelEl.textContent = 'View: Constituency Votes';
+    if (prevBtnEl) prevBtnEl.textContent = '← Prev View';
+    if (nextBtnEl) nextBtnEl.textContent = 'Next View →';
+    return;
+  }
 
-  const maxTotal = Math.max(...scopedPartyData.map(p => p.total), 1);
+  if (subtitleEl) {
+    subtitleEl.textContent = partyListView === 'prVotes'
+      ? 'Party-list proportional votes · vote share + estimated PR seats'
+      : 'FPTP constituency candidate votes · party-wise total vote share';
+  }
+  if (viewLabelEl) {
+    viewLabelEl.textContent = partyListView === 'prVotes'
+      ? 'View: PR Votes'
+      : 'View: Constituency Votes';
+  }
+  if (prevBtnEl) prevBtnEl.textContent = '← Prev View';
+  if (nextBtnEl) nextBtnEl.textContent = 'Next View →';
+
+  if (partyListView === 'prVotes') {
+    const getPrVotes = (p) => {
+      const votes = Number(
+        p.prVotes
+        ?? p.pr_votes
+        ?? p.proportionalVotes
+        ?? p.proportional_votes
+        ?? p.partyListVotes
+        ?? p.party_list_votes
+        ?? p.validPrVotes
+        ?? p.valid_pr_votes
+      );
+      return Number.isFinite(votes) && votes > 0 ? votes : 0;
+    };
+
+    const sortedByPrVotes = [...scopedPartyData].sort((a, b) => getPrVotes(b) - getPrVotes(a));
+    const totalPrVotes = sortedByPrVotes.reduce((s, p) => s + getPrVotes(p), 0);
+    const maxPrVotes = Math.max(...sortedByPrVotes.map(getPrVotes), 1);
+
+    el.innerHTML = `<div style="display:flex;flex-direction:column;gap:11px">${
+      sortedByPrVotes.map((p, i) => {
+        const color = partyColorMap[p.party] || PARTY_COLORS[i % PARTY_COLORS.length];
+        const votes = getPrVotes(p);
+        const barPct = (votes / maxPrVotes * 100).toFixed(1);
+        const share = totalPrVotes > 0 ? (votes / totalPrVotes * 100).toFixed(2) : '0.00';
+        const isActive = !!activePartyFilter && activePartyFilter === p.party;
+        const symImg  = p.symbolId
+          ? `<img style="width:28px;height:28px;border-radius:4px;object-fit:contain;background:rgba(255,255,255,.08);flex-shrink:0" src="https://result.election.gov.np/Images/symbol-hor-pa/${p.symbolId}.jpg" alt="" loading="lazy" onerror="this.style.display='none'">`
+          : '';
+        return `
+          <div class="party-row" data-party="${encodeURIComponent(p.party)}" style="padding:6px 8px;border-radius:8px;cursor:pointer;${isActive ? 'background:var(--color-dim);border:1px solid var(--color-bdr);' : ''}">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:8px">
+              <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0">
+                ${symImg}
+                <span style="font-size:.8rem;font-weight:500;color:${color};max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${p.party}">${p.party}</span>
+              </div>
+              <span style="font-size:.8rem;font-weight:700;white-space:nowrap;color:#cdd0d6">${votes.toLocaleString()}</span>
+            </div>
+            <div style="height:6px;background:var(--color-dim);border-radius:3px;overflow:hidden;display:flex">
+              <div style="background:${color};height:100%;width:${barPct}%;transition:width .6s ease;border-radius:3px"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;font-size:.65rem;color:#6b7280;gap:8px">
+              <span>Vote share: <strong style="color:#93c5fd">${share}%</strong></span>
+              <span>Est. PR seats: <strong style="color:#a78bfa">${Number(p.prSeats || 0)}</strong></span>
+            </div>
+          </div>`;
+      }).join('')
+    }</div>`;
+
+    el.querySelectorAll('.party-row').forEach(row => {
+      row.addEventListener('click', () => {
+        const party = decodeURIComponent(row.getAttribute('data-party') || '');
+        handlePartyBarClick(party);
+      });
+    });
+    return;
+  }
+
+  const scopedCandidates = getFilteredCandidates();
+  const constVoteMap = {};
+  scopedCandidates.forEach(c => {
+    const party = c?.party;
+    if (!party) return;
+    const votes = Number(c?.votes || 0);
+    constVoteMap[party] = (constVoteMap[party] || 0) + (Number.isFinite(votes) ? votes : 0);
+  });
+  const sortedByConstVotes = [...scopedPartyData].sort((a, b) => (constVoteMap[b.party] || 0) - (constVoteMap[a.party] || 0));
+  const totalConstVotes = sortedByConstVotes.reduce((s, p) => s + (constVoteMap[p.party] || 0), 0);
+  const maxConstVotes = Math.max(...sortedByConstVotes.map(p => constVoteMap[p.party] || 0), 1);
 
   el.innerHTML = `<div style="display:flex;flex-direction:column;gap:11px">${
-    scopedPartyData.map((p, i) => {
+    sortedByConstVotes.map((p, i) => {
       const color   = partyColorMap[p.party] || PARTY_COLORS[i % PARTY_COLORS.length];
-      const barWon  = (p.won     / maxTotal * 100).toFixed(1);
-      const barLed  = (p.leading / maxTotal * 100).toFixed(1);
+      const votes = constVoteMap[p.party] || 0;
+      const barPct = (votes / maxConstVotes * 100).toFixed(1);
+      const share = totalConstVotes > 0 ? (votes / totalConstVotes * 100).toFixed(2) : '0.00';
       const isActive = !!activePartyFilter && activePartyFilter === p.party;
       const symImg  = p.symbolId
         ? `<img style="width:28px;height:28px;border-radius:4px;object-fit:contain;background:rgba(255,255,255,.08);flex-shrink:0" src="https://result.election.gov.np/Images/symbol-hor-pa/${p.symbolId}.jpg" alt="" loading="lazy" onerror="this.style.display='none'">`
         : '';
       return `
         <div class="party-row" data-party="${encodeURIComponent(p.party)}" style="padding:6px 8px;border-radius:8px;cursor:pointer;${isActive ? 'background:var(--color-dim);border:1px solid var(--color-bdr);' : ''}">
-          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:8px">
             <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0">
               ${symImg}
               <span style="font-size:.8rem;font-weight:500;color:${color};max-width:240px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${p.party}">${p.party}</span>
             </div>
-            <span style="font-size:.8rem;font-weight:700;white-space:nowrap">
-              <span style="color:#22c55e">${p.won}</span>
-              <span style="color:#475569"> + </span>
-              <span style="color:#d97706">${p.leading}</span>
-              <span style="color:#6b7280"> = ${p.total}</span>
-            </span>
+            <span style="font-size:.8rem;font-weight:700;white-space:nowrap;color:#cdd0d6">${votes.toLocaleString()}</span>
           </div>
           <div style="height:6px;background:var(--color-dim);border-radius:3px;overflow:hidden;display:flex">
-            <div style="background:#22c55e;height:100%;width:${barWon}%;transition:width .6s ease;border-radius:3px 0 0 3px"></div>
-            <div style="background:#d97706;height:100%;width:${barLed}%;transition:width .6s ease;border-radius:0 3px 3px 0"></div>
+            <div style="background:${color};height:100%;width:${barPct}%;transition:width .6s ease;border-radius:3px"></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:5px;font-size:.65rem;color:#6b7280;gap:8px">
+            <span>Vote share: <strong style="color:#93c5fd">${share}%</strong></span>
+            <span>Won+Leading: <strong style="color:#a78bfa">${Number(p.total || 0)}</strong></span>
           </div>
         </div>`;
     }).join("")
