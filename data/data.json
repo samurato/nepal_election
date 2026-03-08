@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-03-08T19:11:14Z",
+  "updated_at": "2026-03-08T19:13:25Z",
   "parties": [
     {
       "party": "राष्ट्रिय स्वतन्त्र पार्टी",
@@ -7,7 +7,7 @@
       "leading": 1,
       "total": 125,
       "symbolId": 2528,
-      "prVotes": 3280367
+      "prVotes": 3291349
     },
     {
       "party": "नेपाली काँग्रेस",
@@ -15,7 +15,7 @@
       "leading": 1,
       "total": 18,
       "symbolId": 2583,
-      "prVotes": 1106715
+      "prVotes": 1108806
     },
     {
       "party": "नेपाल कम्युनिष्ट पार्टी (एकीकृत मार्क्सवादी लेनिनवादी)",
@@ -23,7 +23,7 @@
       "leading": 1,
       "total": 9,
       "symbolId": 2598,
-      "prVotes": 941768
+      "prVotes": 943852
     },
     {
       "party": "नेपाली कम्युनिष्ट पार्टी",
@@ -31,7 +31,7 @@
       "leading": 0,
       "total": 7,
       "symbolId": 2557,
-      "prVotes": 470246
+      "prVotes": 470925
     },
     {
       "party": "श्रम संस्कृति पार्टी",
@@ -39,7 +39,7 @@
       "leading": 0,
       "total": 3,
       "symbolId": 2501,
-      "prVotes": 191131
+      "prVotes": 195377
     },
     {
       "party": "राष्ट्रिय प्रजातन्त्र पार्टी",
@@ -47,7 +47,7 @@
       "leading": 0,
       "total": 1,
       "symbolId": 2604,
-      "prVotes": 232035
+      "prVotes": 232532
     },
     {
       "party": "स्वतन्त्र",
@@ -62,132 +62,132 @@
     {
       "party": "राष्ट्रिय स्वतन्त्र पार्टी",
       "symbolId": 2528,
-      "prVotes": 3280367
+      "prVotes": 3291349
     },
     {
       "party": "नेपाली काँग्रेस",
       "symbolId": 2583,
-      "prVotes": 1106715
+      "prVotes": 1108806
     },
     {
       "party": "नेपाल कम्युनिष्ट पार्टी (एकीकृत मार्क्सवादी लेनिनवादी)",
       "symbolId": 2598,
-      "prVotes": 941768
+      "prVotes": 943852
     },
     {
       "party": "नेपाली कम्युनिष्ट पार्टी",
       "symbolId": 2557,
-      "prVotes": 470246
+      "prVotes": 470925
     },
     {
       "party": "राष्ट्रिय प्रजातन्त्र पार्टी",
       "symbolId": 2604,
-      "prVotes": 232035
+      "prVotes": 232532
     },
     {
       "party": "श्रम संस्कृति पार्टी",
       "symbolId": 2501,
-      "prVotes": 191131
+      "prVotes": 195377
     },
     {
       "party": "जनता समाजवादी पार्टी, नेपाल",
       "symbolId": 2542,
-      "prVotes": 94025
+      "prVotes": 95039
     },
     {
       "party": "राष्ट्रिय परिवर्तन पार्टी",
       "symbolId": 2568,
-      "prVotes": 81557
+      "prVotes": 81736
     },
     {
       "party": "जनमत पार्टी",
       "symbolId": 2585,
-      "prVotes": 41015
+      "prVotes": 41692
     },
     {
       "party": "नेपाल मजदुर किसान पार्टी",
       "symbolId": 2578,
-      "prVotes": 37572
+      "prVotes": 37610
     },
     {
       "party": "एकल चिन्ह चकिया (जाँतो) (राष्ट्रिय मुक्ति पार्टी नेपाल/जनता समाजवादी पार्टी/नागरिक उन्मुक्ति पार्टी, नेपाल)",
       "symbolId": 2531,
-      "prVotes": 31505
+      "prVotes": 31537
     },
     {
       "party": "राष्ट्र निर्माण दल नेपाल",
       "symbolId": 2527,
-      "prVotes": 22126
+      "prVotes": 22255
     },
     {
       "party": "राष्ट्रिय जनमोर्चा",
       "symbolId": 2522,
-      "prVotes": 21856
+      "prVotes": 21858
     },
     {
       "party": "नेपाल जनता संरक्षण पार्टी",
       "symbolId": 2541,
-      "prVotes": 16708
+      "prVotes": 16782
     },
     {
       "party": "नेपाल कम्युनिस्ट पार्टी (माओवादी)",
       "symbolId": 2526,
-      "prVotes": 16397
+      "prVotes": 16409
     },
     {
       "party": "प्रगतिशील लोकतान्त्रिक पार्टी",
       "symbolId": 2516,
-      "prVotes": 14580
+      "prVotes": 14600
     },
     {
       "party": "एकल चिन्ह  बस (नेपाल संघीय समाजवादी पार्टी/बहुजन एकता पार्टी नेपाल/नेपाल जनजागृति पार्टी)",
       "symbolId": 2567,
-      "prVotes": 12513
+      "prVotes": 12828
     },
     {
       "party": "मंगोल नेशनल अर्गनाइजेशन",
       "symbolId": 2511,
-      "prVotes": 11862
+      "prVotes": 11948
     },
     {
       "party": "सार्वभौम नागरिक पार्टी",
       "symbolId": 2520,
-      "prVotes": 9209
+      "prVotes": 9243
     },
     {
       "party": "एकल चिन्ह मोबाइल (आम जनता पार्टी/जनादेश पार्टी नेपाल)",
       "symbolId": 2581,
-      "prVotes": 7874
+      "prVotes": 7908
     },
     {
       "party": "राष्ट्रिय मुक्ति आन्दोलन, नेपाल",
       "symbolId": 2591,
-      "prVotes": 6501
+      "prVotes": 6518
     },
     {
       "party": "संयुक्त नागरिक पार्टी",
       "symbolId": 2521,
-      "prVotes": 5470
+      "prVotes": 5484
     },
     {
       "party": "नेपाल जनता पार्टी",
       "symbolId": 2507,
-      "prVotes": 4567
+      "prVotes": 4582
     },
     {
       "party": "राष्ट्रिय एकता दल",
       "symbolId": 2548,
-      "prVotes": 4428
+      "prVotes": 4441
     },
     {
       "party": "राष्ट्रिय जनमुक्ति पार्टी",
       "symbolId": 2605,
-      "prVotes": 3902
+      "prVotes": 3987
     },
     {
       "party": "नेपालका लागि नेपाली पार्टी",
       "symbolId": 2524,
-      "prVotes": 3677
+      "prVotes": 3686
     },
     {
       "party": "नेशनल रिपब्लिक नेपाल",
@@ -197,137 +197,137 @@
     {
       "party": "नेपाल कम्युनिष्ट पार्टी (मार्क्सवादी-लेनिनवादी)",
       "symbolId": 2602,
-      "prVotes": 3523
+      "prVotes": 3526
     },
     {
       "party": "नेपाल कम्युनिष्ट पार्टी मार्क्सवादी (पुष्पलाल)",
       "symbolId": 2523,
-      "prVotes": 3328
+      "prVotes": 3333
     },
     {
       "party": "राष्ट्रिय उर्जाशील पार्टी, नेपाल",
       "symbolId": 2534,
-      "prVotes": 3152
+      "prVotes": 3156
     },
     {
       "party": "राष्ट्रिय गौरव पार्टी",
       "symbolId": 2558,
-      "prVotes": 2838
-    },
-    {
-      "party": "नेपाल कम्युनिष्ट पार्टी (संयुक्त)",
-      "symbolId": 2601,
-      "prVotes": 2691
+      "prVotes": 2879
     },
     {
       "party": "संघीय लोकतान्त्रिक राष्ट्रिय मञ्च",
       "symbolId": 2550,
-      "prVotes": 2689
+      "prVotes": 2742
+    },
+    {
+      "party": "नेपाल कम्युनिष्ट पार्टी (संयुक्त)",
+      "symbolId": 2601,
+      "prVotes": 2697
     },
     {
       "party": "गतिशील लोकतान्त्रिक पार्टी",
       "symbolId": 2571,
-      "prVotes": 2382
+      "prVotes": 2395
     },
     {
       "party": "समावेशी समाजवादी पार्टी नेपाल",
       "symbolId": 2572,
-      "prVotes": 2379
+      "prVotes": 2385
     },
     {
       "party": "नेपाल लोकतान्त्रिक पार्टी",
       "symbolId": 2553,
-      "prVotes": 2309
+      "prVotes": 2335
     },
     {
       "party": "नेपाल मातृभूमि पार्टी",
       "symbolId": 2565,
-      "prVotes": 2004
+      "prVotes": 2017
     },
     {
       "party": "जय मातृभूमि पार्टी",
       "symbolId": 2510,
-      "prVotes": 1754
+      "prVotes": 1762
     },
     {
       "party": "राष्ट्रिय जनता पार्टी नेपाल",
       "symbolId": 2551,
-      "prVotes": 1716
+      "prVotes": 1723
     },
     {
       "party": "बहुजन शक्ति पार्टी",
       "symbolId": 2536,
-      "prVotes": 1712
+      "prVotes": 1718
     },
     {
       "party": "नेपाल जनमुक्ति पार्टी",
       "symbolId": 2529,
-      "prVotes": 1351
+      "prVotes": 1361
     },
     {
       "party": "प्रजातान्त्रिक पार्टी नेपाल",
       "symbolId": 2582,
-      "prVotes": 1349
+      "prVotes": 1358
     },
     {
       "party": "जन अधिकार पार्टी",
       "symbolId": 2540,
-      "prVotes": 1320
+      "prVotes": 1324
     },
     {
       "party": "नेपाल सद्‍भावना पार्टी",
       "symbolId": 2555,
-      "prVotes": 1114
+      "prVotes": 1138
     },
     {
       "party": "पिपुल फर्ष्ट पार्टी",
       "symbolId": 2552,
-      "prVotes": 1098
+      "prVotes": 1109
     },
     {
       "party": "नागरिक शक्ति, नेपाल",
       "symbolId": 2549,
-      "prVotes": 1042
+      "prVotes": 1048
     },
     {
       "party": "नेपाली काँग्रेस (वी.पी.)",
       "symbolId": 2509,
-      "prVotes": 1025
+      "prVotes": 1029
     },
     {
       "party": "स्वाभिमान पार्टी",
       "symbolId": 2569,
-      "prVotes": 931
+      "prVotes": 933
     },
     {
       "party": "नेपाली जनश्रमदान संस्कृति पार्टी",
       "symbolId": 2579,
-      "prVotes": 860
+      "prVotes": 870
     },
     {
       "party": "नेपाली जनता दल",
       "symbolId": 2595,
-      "prVotes": 843
-    },
-    {
-      "party": "जनता लोकतान्त्रिक पार्टी, नेपाल",
-      "symbolId": 2574,
-      "prVotes": 838
+      "prVotes": 846
     },
     {
       "party": "समावेशी समाजवादी पार्टी",
       "symbolId": 2590,
-      "prVotes": 835
+      "prVotes": 844
+    },
+    {
+      "party": "जनता लोकतान्त्रिक पार्टी, नेपाल",
+      "symbolId": 2574,
+      "prVotes": 839
     },
     {
       "party": "एकल चिन्ह जगर भएको सिंह(सचेत नेपाली पार्टी/नागरिक सर्वोच्चता पार्टी नेपाल)",
       "symbolId": 2537,
-      "prVotes": 603
+      "prVotes": 607
     },
     {
       "party": "जनप्रिय लोकतान्त्रिक पार्टी",
       "symbolId": 2564,
-      "prVotes": 540
+      "prVotes": 542
     },
     {
       "party": "मितेरी पार्टी नेपाल",
@@ -337,7 +337,7 @@
     {
       "party": "उन्‍नत लोकतन्त्र पार्टी",
       "symbolId": 2515,
-      "prVotes": 404
+      "prVotes": 406
     },
     {
       "party": "त्रिमुल नेपाल",
