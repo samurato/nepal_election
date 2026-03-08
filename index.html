@@ -221,6 +221,7 @@
         <div>
           <h2 class="text-sm font-semibold">Party-wise Seat Tally — दलगत स्थिति</h2>
           <p class="text-[0.7rem] text-gray-500 mt-0.5">FPTP constituencies · Won + Leading</p>
+          <button id="party-filter-indicator" type="button" onclick="clearPartyFilterFromIndicator()" class="text-[0.65rem] text-blue-400 mt-1 hidden hover:underline cursor-pointer" title="Clear selected party filter"></button>
         </div>
         <div class="flex gap-3.5 text-[0.67rem] text-gray-500">
           <span><span class="inline-block w-2 h-2 rounded-full bg-green-500 mr-1 align-middle"></span>Won</span>
@@ -303,6 +304,7 @@
         <div class="skeleton h-[130px]"></div>
         <div class="skeleton h-[130px]"></div>
       </div>
+      <div id="politicians-carousel-controls" class="mt-3 hidden"></div>
     </div>
   </div>
 
@@ -320,7 +322,7 @@
           class="bg-surface border border-bdr text-[#cdd0d6] rounded-md px-3 py-1.5 text-xs outline-none focus:border-blue-500">
           <option value="">All Provinces</option>
         </select>
-        <select id="filter-party" onchange="renderTable()"
+        <select id="filter-party" onchange="handlePartyFilterChange(this.value)"
           class="bg-surface border border-bdr text-[#cdd0d6] rounded-md px-3 py-1.5 text-xs outline-none focus:border-blue-500">
           <option value="">All Parties</option>
         </select>
@@ -564,9 +566,23 @@ function buildSearchKey(w) {
 //  Per-constituency candidate index (built from the central dataset)
 // ════════════════════════════════════════════════════════════════════
 
-// constNo(string) → candidate[]  sorted by votes desc
+// constKey(string: "<const_no>|<province>|<district>") → candidate[] sorted by votes desc
 // Populated once in fetchAll() from the central jqGrid response.
 let constCandsByNo = {};
+
+function normKeyPart(v) {
+  return String(v || '').trim().toLowerCase();
+}
+
+function electorateKey(row) {
+  return `${normKeyPart(row?.province)}|${normKeyPart(row?.district)}`;
+}
+
+function constituencyKey(row) {
+  const no = String(row?.constituency_no || '').trim();
+  if (!no) return '';
+  return `${no}|${electorateKey(row)}`;
+}
 
 /**
  * Return all candidates for a constituency.
@@ -574,7 +590,9 @@ let constCandsByNo = {};
  * Fallback: old per-constituency file fetch (used only if central data wasn't loaded yet).
  */
 async function fetchConstCandidates(constNo, candObj) {
-  const key = constNo ? String(constNo) : null;
+  const key = (constNo && candObj)
+    ? `${String(constNo)}|${electorateKey(candObj)}`
+    : null;
 
   // Fast path — already indexed from centre data
   if (key && constCandsByNo[key] && constCandsByNo[key].length > 0) {
@@ -585,10 +603,13 @@ async function fetchConstCandidates(constNo, candObj) {
   if (allCandidates.length > 0) {
     const constName = candObj?.constituency || '';
     let filtered = key
-      ? allCandidates.filter(c => String(c.constituency_no) === key)
+      ? allCandidates.filter(c => constituencyKey(c) === key)
       : [];
     if (filtered.length === 0 && constName) {
-      filtered = allCandidates.filter(c => c.constituency === constName);
+      filtered = allCandidates.filter(c => (
+        c.constituency === constName &&
+        electorateKey(c) === electorateKey(candObj)
+      ));
     }
     if (filtered.length >= 1) return filtered;
   }
@@ -619,6 +640,73 @@ let chart         = null;
 let fetchCount    = 0;
 let nextAt        = null;
 let partyColorMap = {};
+let activePartyFilter = "";
+
+function getFilteredPartyData() {
+  if (!activePartyFilter) return partyData;
+  return partyData.filter(p => p.party === activePartyFilter);
+}
+
+function getFilteredWinners() {
+  if (!activePartyFilter) return allWinners;
+  return allWinners.filter(w => w.party === activePartyFilter);
+}
+
+function getFilteredCandidates() {
+  if (!activePartyFilter) return allCandidates;
+  return allCandidates.filter(c => c.party === activePartyFilter);
+}
+
+function updatePartyFilterIndicator() {
+  const el = document.getElementById('party-filter-indicator');
+  if (!el) return;
+  if (activePartyFilter) {
+    el.textContent = `Filtered by: ${activePartyFilter} · Clear`;
+    el.classList.remove('hidden');
+  } else {
+    el.textContent = '';
+    el.classList.add('hidden');
+  }
+}
+
+function clearPartyFilterFromIndicator() {
+  if (!activePartyFilter) return;
+  applyPartyFilter('', true);
+}
+
+function applyPartyFilter(nextParty, pushHistory = false) {
+  const party = String(nextParty || '');
+  const changed = party !== activePartyFilter;
+  activePartyFilter = party;
+  updatePartyFilterIndicator();
+
+  populateFilters();
+  updateMetrics();
+  renderPartyList();
+  renderChart();
+  renderTable();
+  renderMap();
+  renderPoliticiansBox();
+
+  if (pushHistory && changed) {
+    history.pushState({ partyFilter: activePartyFilter }, '', window.location.href);
+  }
+}
+
+function handlePartyBarClick(partyName) {
+  if (!partyName) return;
+  const next = activePartyFilter === partyName ? '' : partyName;
+  applyPartyFilter(next, true);
+}
+
+function handlePartyFilterChange(partyName) {
+  applyPartyFilter(partyName || '', true);
+}
+
+window.addEventListener('popstate', (event) => {
+  const partyFromHistory = event?.state?.partyFilter || '';
+  applyPartyFilter(partyFromHistory, false);
+});
 
 // ════════════════════════════════════════════════════════════════════
 //  Data loader — single data.json fetch
@@ -646,7 +734,8 @@ async function fetchAll() {
     allCandidates.forEach(c => { c._searchKey = buildSearchKey(c); });
     constCandsByNo = {};
     allCandidates.forEach(c => {
-      const key = String(c.constituency_no);
+      const key = constituencyKey(c);
+      if (!key) return;
       if (!constCandsByNo[key]) constCandsByNo[key] = [];
       constCandsByNo[key].push(c);
     });
@@ -659,9 +748,14 @@ async function fetchAll() {
       partyColorMap[p.party] = PARTY_COLORS[i % PARTY_COLORS.length];
     });
 
-    // Attach estimated PR seats (Sainte-Laguë)
+    // Attach PR seats from party-list votes (Sainte-Laguë)
     const prEst = computeEstimatedPR();
     partyData.forEach(p => { p.prSeats = prEst[p.party] || 0; });
+
+    if (activePartyFilter && !partyData.some(p => p.party === activePartyFilter)) {
+      activePartyFilter = '';
+      updatePartyFilterIndicator();
+    }
 
     fetchCount++;
     nextAt = Date.now() + INTERVAL;
@@ -693,15 +787,18 @@ async function fetchAll() {
 //  Metrics
 // ════════════════════════════════════════════════════════════════════
 function updateMetrics() {
-  const totalWon     = partyData.reduce((s, p) => s + p.won,     0);
-  const totalLeading = partyData.reduce((s, p) => s + p.leading, 0);
-  const topTotal     = partyData[0]?.total ?? 0;
+  const scopedPartyData = getFilteredPartyData();
+  const scopedWinners = getFilteredWinners();
+
+  const totalWon     = scopedPartyData.reduce((s, p) => s + p.won,     0);
+  const totalLeading = scopedPartyData.reduce((s, p) => s + p.leading, 0);
+  const topTotal     = scopedPartyData[0]?.total ?? 0;
 
   document.getElementById("m-won").textContent     = totalWon;
   document.getElementById("m-leading").textContent = totalLeading;
   document.getElementById("m-total").textContent   = totalWon + totalLeading;
-  document.getElementById("m-const").textContent   = allWinners.length + " / 165";
-  document.getElementById("m-parties").textContent = partyData.length;
+  document.getElementById("m-const").textContent   = scopedWinners.length + " / 165";
+  document.getElementById("m-parties").textContent = scopedPartyData.length;
 
   // Majority progress for leading party
   const pct = Math.min(100, (topTotal / 83 * 100)).toFixed(1);
@@ -714,20 +811,22 @@ function updateMetrics() {
 // ════════════════════════════════════════════════════════════════════
 function renderPartyList() {
   const el = document.getElementById("party-list");
-  if (!partyData.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;font-size:.85rem">No data</div>'; return; }
+  const scopedPartyData = getFilteredPartyData();
+  if (!scopedPartyData.length) { el.innerHTML = '<div style="text-align:center;padding:40px;color:#6b7280;font-size:.85rem">No data</div>'; return; }
 
-  const maxTotal = Math.max(...partyData.map(p => p.total), 1);
+  const maxTotal = Math.max(...scopedPartyData.map(p => p.total), 1);
 
   el.innerHTML = `<div style="display:flex;flex-direction:column;gap:11px">${
-    partyData.map((p, i) => {
-      const color   = PARTY_COLORS[i % PARTY_COLORS.length];
+    scopedPartyData.map((p, i) => {
+      const color   = partyColorMap[p.party] || PARTY_COLORS[i % PARTY_COLORS.length];
       const barWon  = (p.won     / maxTotal * 100).toFixed(1);
       const barLed  = (p.leading / maxTotal * 100).toFixed(1);
+      const isActive = !!activePartyFilter && activePartyFilter === p.party;
       const symImg  = p.symbolId
         ? `<img style="width:28px;height:28px;border-radius:4px;object-fit:contain;background:rgba(255,255,255,.08);flex-shrink:0" src="https://result.election.gov.np/Images/symbol-hor-pa/${p.symbolId}.jpg" alt="" loading="lazy" onerror="this.style.display='none'">`
         : '';
       return `
-        <div>
+        <div class="party-row" data-party="${encodeURIComponent(p.party)}" style="padding:6px 8px;border-radius:8px;cursor:pointer;${isActive ? 'background:var(--color-dim);border:1px solid var(--color-bdr);' : ''}">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:5px">
             <div style="display:flex;align-items:center;gap:7px;flex:1;min-width:0">
               ${symImg}
@@ -747,26 +846,45 @@ function renderPartyList() {
         </div>`;
     }).join("")
   }</div>`;
+
+  el.querySelectorAll('.party-row').forEach(row => {
+    row.addEventListener('click', () => {
+      const party = decodeURIComponent(row.getAttribute('data-party') || '');
+      handlePartyBarClick(party);
+    });
+  });
 }
 
 // ════════════════════════════════════════════════════════════════════
 //  Estimated PR allocation (Sainte-Laguë method)
 // ════════════════════════════════════════════════════════════════════
 function computeEstimatedPR() {
-  // Aggregate votes from FPTP winners as a proxy for party vote share
   const voteMap = {};
-  allWinners.forEach(w => {
-    if (w.party && w.votes) voteMap[w.party] = (voteMap[w.party] || 0) + w.votes;
+  partyData.forEach(p => {
+    const votes = Number(
+      p.prVotes
+      ?? p.pr_votes
+      ?? p.proportionalVotes
+      ?? p.proportional_votes
+      ?? p.partyListVotes
+      ?? p.party_list_votes
+      ?? p.validPrVotes
+      ?? p.valid_pr_votes
+    );
+    if (p.party && Number.isFinite(votes) && votes > 0) {
+      voteMap[p.party] = (voteMap[p.party] || 0) + votes;
+    }
   });
+
   const totalVotes = Object.values(voteMap).reduce((s, v) => s + v, 0);
   if (totalVotes === 0) return {};
 
-  // Threshold: ≥3% of total FPTP winner votes OR won at least 1 FPTP seat
-  const wonParties = new Set(partyData.filter(p => p.won > 0).map(p => p.party));
+  // Threshold: ≥3% of total valid PR party-list votes
   const eligible = {};
   for (const [party, votes] of Object.entries(voteMap)) {
-    if (votes / totalVotes >= 0.03 || wonParties.has(party)) eligible[party] = votes;
+    if (votes / totalVotes >= 0.03) eligible[party] = votes;
   }
+  if (!Object.keys(eligible).length) return {};
 
   // Sainte-Laguë: divisors 1, 3, 5, 7, …
   const seats = {};
@@ -787,18 +905,19 @@ function computeEstimatedPR() {
 // ════════════════════════════════════════════════════════════════════
 function renderChart() {
   const el = document.getElementById("partyChart");
-  if (!partyData.length) { el.innerHTML = '<div class="no-data">No data</div>'; return; }
+  const scopedPartyData = getFilteredPartyData();
+  if (!scopedPartyData.length) { el.innerHTML = '<div class="no-data">No data</div>'; return; }
 
   // ──────── FPTP arch (165 seats, 4 rows) ────────
   const FPTP_TOTAL   = 165;
-  const totalWon     = partyData.reduce((s, p) => s + p.won,     0);
-  const totalLeading = partyData.reduce((s, p) => s + p.leading, 0);
+  const totalWon     = scopedPartyData.reduce((s, p) => s + p.won,     0);
+  const totalLeading = scopedPartyData.reduce((s, p) => s + p.leading, 0);
   const totalDecl    = totalWon + totalLeading;
   const unallocated  = Math.max(0, FPTP_TOTAL - totalDecl);
 
   const fptpSeats = [];
-  partyData.forEach((p, i) => {
-    const color = PARTY_COLORS[i % PARTY_COLORS.length];
+  scopedPartyData.forEach((p, i) => {
+    const color = partyColorMap[p.party] || PARTY_COLORS[i % PARTY_COLORS.length];
     for (let j = 0; j < p.won;     j++) fptpSeats.push({ label: p.party, color, type: 'won'      });
     for (let j = 0; j < p.leading; j++) fptpSeats.push({ label: p.party, color, type: 'leading'  });
   });
@@ -850,8 +969,8 @@ function renderChart() {
 
   const prSeats = [];
   let prTotal = 0;
-  partyData.forEach((p, i) => {
-    const color = PARTY_COLORS[i % PARTY_COLORS.length];
+  scopedPartyData.forEach((p, i) => {
+    const color = partyColorMap[p.party] || PARTY_COLORS[i % PARTY_COLORS.length];
     const n = p.prSeats || 0;
     prTotal += n;
     for (let j = 0; j < n; j++) prSeats.push({ label: p.party, color });
@@ -880,8 +999,8 @@ function renderChart() {
   }).join('');
 
   // ──────── Legend ────────
-  const legendHTML = partyData.map((p, i) => {
-    const color = PARTY_COLORS[i % PARTY_COLORS.length];
+  const legendHTML = scopedPartyData.map((p, i) => {
+    const color = partyColorMap[p.party] || PARTY_COLORS[i % PARTY_COLORS.length];
     const name  = p.party.length > 28 ? p.party.slice(0, 28) + '…' : p.party;
     return `
       <div style="display:flex;align-items:center;gap:5px;font-size:.68rem;color:#6b7280;white-space:nowrap">
@@ -933,12 +1052,17 @@ function renderChart() {
 //  Winners table
 // ════════════════════════════════════════════════════════════════════
 function populateFilters() {
-  const provinces = [...new Set(allWinners.map(w => w.province).filter(Boolean))].sort();
-  const parties   = [...new Set(allWinners.map(w => w.party).filter(Boolean))].sort();
+  const scopedWinners = getFilteredWinners();
+  const provinces = [...new Set(scopedWinners.map(w => w.province).filter(Boolean))].sort();
+  const parties = [...new Set([
+    ...allWinners.map(w => w.party),
+    ...partyData.map(p => p.party),
+  ].filter(Boolean))].sort();
 
   const pSel  = document.getElementById("filter-province");
   const ptSel = document.getElementById("filter-party");
-  const curP  = pSel.value, curPt = ptSel.value;
+  const curP  = pSel.value;
+  const curPt = activePartyFilter || ptSel.value;
 
   pSel.innerHTML  = '<option value="">All Provinces</option>' +
     provinces.map(v => `<option value="${v}"${v===curP?" selected":""}>${v}</option>`).join("");
@@ -949,8 +1073,9 @@ function populateFilters() {
 function renderTable() {
   const search   = document.getElementById("search").value.toLowerCase();
   const province = document.getElementById("filter-province").value;
-  const party    = document.getElementById("filter-party").value;
+  const party    = activePartyFilter || document.getElementById("filter-party").value;
   const sortKey  = document.getElementById("sort-col").value;
+  const scopedWinners = getFilteredWinners();
 
   // Expand query via aliases then transliterate for Roman→Nepali match
   let queryNepali = search;
@@ -960,7 +1085,7 @@ function renderTable() {
   const queryRoman    = devToRoman(queryNepali);
   const queryPhonetic = phoneticNormalize(queryRoman || search);
 
-  let rows = allWinners.filter(w => {
+  let rows = scopedWinners.filter(w => {
     if (province && w.province !== province) return false;
     if (party    && w.party    !== party)    return false;
     if (search) {
@@ -981,7 +1106,7 @@ function renderTable() {
   });
 
   document.getElementById("winners-count").textContent =
-    `${rows.length} of ${allWinners.length} elected candidates`;
+    `${rows.length} of ${scopedWinners.length} elected candidates${activePartyFilter ? ` · ${activePartyFilter}` : ''}`;
 
   const tbody = document.getElementById("winners-tbody");
   if (!rows.length) {
@@ -1075,11 +1200,12 @@ async function renderMap() {
   const container = document.getElementById('nepal-map-container');
   const legEl     = document.getElementById('map-legend');
   if (!container) return;
+  const scopedWinners = getFilteredWinners();
 
   // ── Index allWinners by district key ──
   // distData[key] = { constituencies: [ {no, name, candidate, party, votes, status} ], partyCount: {} }
   const distData = {};
-  allWinners.forEach(w => {
+  scopedWinners.forEach(w => {
     const key = districtKey(w.district);
     if (!key) return;
     if (!distData[key]) distData[key] = { constituencies: [], partyCount: {} };
@@ -1276,24 +1402,42 @@ function updateCountdown() {
 //   label  : display name (English)
 //   nameNe : exact Nepali name (or fragment) matched directly against the candidate field
 const WATCHLIST = [
-//   { label: "KP Sharma Oli",            nameNe: "केपी शर्मा ओली" },
-//   { label: "Sher Bahadur Deuba",       nameNe: "शेरबहादुर देउबा" },
-//   { label: "Pushpa Kamal Dahal",       nameNe: "पुष्पकमल दाहाल" },
-//   { label: "Rabi Lamichhane",          nameNe: "रबि लामिछाने" },
-//   { label: "Gagan Thapa",              nameNe: "गगन थापा" },
-  { label: "Balen Shah",               nameNe: "वालेन्द्र शाह" },
-//   { label: "Madhav Kumar Nepal",       nameNe: "माधव कुमार नेपाल" },
-//   { label: "Birodh Khatiwada",         nameNe: "विरोध खतिवडा" },
-//   { label: "Minendra Rijal",           nameNe: "मिनेन्द्र रिजाल" },
-//   { label: "Prem Suwal",               nameNe: "प्रेम सुवाल" },
-//   { label: "Durga Prasad Bhattarai",   nameNe: "दुर्गाप्रसाद भट्टराई" },
-//   { label: "Rekha Sharma",             nameNe: "रेखा शर्मा" },
+  { label: "Balendra Shah", nameNe: "वालेन्द्र शाह" },
+  { label: "K.P. Oli", nameNe: "केपी शर्मा ओली" },
+  { label: "Pushpa Kamal Dahal", nameNe: "पुष्पकमल दाहाल" },
+  { label: "Mahesh Basnet", nameNe: "महेश बस्नेत" },
+  { label: "Ravi Lamichhane", nameNe: "रवि लामिछाने" },
+  { label: "Binod Chaudhari", nameNe: "विनोद चौधरी" },
+  { label: "Madhav Kumar Nepal", nameNe: "माधवकुमार नेपाल" },
+  { label: "Kulman Ghising", nameNe: "कुलमान घिसिङ" },
+  { label: "Mahabir Pun", nameNe: "महावीर पुन" },
+  { label: "Toshima Karki", nameNe: "तोसीमा कार्की" },
+  { label: "Sagar Dhakal", nameNe: "सागर ढकाल" },
+  { label: "Sudhan Gurung", nameNe: "सुधन गुरुङ" },
+  { label: "Swarnim Wagle", nameNe: "स्वर्णिम वाग्ले" },
+  { label: "Gagan थापा", nameNe: "गगन कुमार थापा" },
+  { label: "Upendra Yadhav", nameNe: "उपेन्द्र यादव" },
+  { label: "Ashika Tamang", nameNe: "आसिका तामाङ" },
 ];
 
+
+function hasNonAscii(text) {
+  return /[^\x00-\x7F]/.test(String(text || ''));
+}
+
+
 let polTab = 'watchlist';
+let polWatchPage = 0;
+const WATCHLIST_SLIDE_SIZE = 8;
+
+function changeWatchlistPage(step) {
+  polWatchPage += step;
+  renderPoliticiansBox();
+}
 
 function switchPolTab(tab) {
   polTab = tab;
+  if (tab === 'watchlist') polWatchPage = 0;
   const activeClass   = 'px-2.5 py-1 rounded-md border text-[0.67rem] border-blue-500 bg-blue-500/20 text-blue-400 cursor-pointer';
   const inactiveClass = 'px-2.5 py-1 rounded-md border text-[0.67rem] border-bdr text-gray-500 hover:bg-dim cursor-pointer';
   document.getElementById('pol-tab-watchlist').className = tab === 'watchlist' ? activeClass : inactiveClass;
@@ -1303,7 +1447,9 @@ function switchPolTab(tab) {
 
 /** Stable compound key: constituency_no + district so province-5 of Jhapa ≠ province-5 of Kaski. */
 function constKey(w) {
-  return String(w.constituency_no || w.constituency || '?') + '|' + (w.district || w.province || '');
+  const strict = constituencyKey(w);
+  if (strict) return strict;
+  return `${String(w.constituency || '?')}|${electorateKey(w)}`;
 }
 
 /** Group allWinners by compound key, sorted by votes desc within each group. */
@@ -1340,7 +1486,7 @@ function renderPoliticianCard(cand, allInConst, watchLabel, status) {
     won:     `<span style="background:#22c55e22;color:#22c55e;border:1px solid #22c55e55;padding:1px 8px;border-radius:10px;font-size:.62rem;font-weight:700;white-space:nowrap">✔ WON</span>`,
     lost:    `<span style="background:#ef444422;color:#ef4444;border:1px solid #ef444455;padding:1px 8px;border-radius:10px;font-size:.62rem;font-weight:700;white-space:nowrap">✘ LOST</span>`,
     leading: `<span style="background:#f59e0b22;color:#f59e0b;border:1px solid #f59e0b55;padding:1px 8px;border-radius:10px;font-size:.62rem;font-weight:700;white-space:nowrap">▲ LEADING</span>`,
-    unknown: `<span style="background:#94a3b822;color:#94a3b8;border:1px solid #94a3b855;padding:1px 8px;border-radius:10px;font-size:.62rem;font-weight:700;white-space:nowrap">— RESULT</span>`,
+    unknown: `<span style="background:#94a3b822;color:#94a3b8;border:1px solid #94a3b855;padding:1px 8px;border-radius:10px;font-size:.62rem;font-weight:700;white-space:nowrap">— NOT DECLARED</span>`,
   };
   const statusBadge = BADGE[status] || BADGE.unknown;
 
@@ -1350,7 +1496,11 @@ function renderPoliticianCard(cand, allInConst, watchLabel, status) {
   // Opponent rows — all other candidates from the same constituency
   const winner = allInConst[0]; // sorted by votes, so [0] has the most
   const opponentRows = allInConst
-    .filter(c => c !== cand)
+    .filter(c => {
+      if (cand.candidateId && c.candidateId) return c.candidateId !== cand.candidateId;
+      return !(c.candidate === cand.candidate && c.party === cand.party);
+    })
+    .slice(0, 5)
     .map(op => {
       const oc      = partyColorMap[op.party] || '#64748b';
       const ov      = op.votes ? Number(op.votes).toLocaleString() : '—';
@@ -1401,7 +1551,7 @@ function renderPoliticianCard(cand, allInConst, watchLabel, status) {
       <!-- Opponents -->
       ${opponentRows ? `
         <div style="border-top:1px solid var(--color-bdr);padding-top:6px">
-          <div style="font-size:.6rem;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Top Opponents in Constituency</div>
+          <div style="font-size:.6rem;color:#6b7280;text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px">Top 5 Opponents in Constituency</div>
           ${opponentRows}
         </div>` : `
         <div style="border-top:1px solid var(--color-bdr);padding-top:6px" data-opponents-loading>
@@ -1410,69 +1560,160 @@ function renderPoliticianCard(cand, allInConst, watchLabel, status) {
     </div>`;
 }
 
+function normalizeNameText(text) {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/[.\u0964\u0965,()'"\-]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 /**
- * Match a watchlist entry against a winner row.
- * Matches if the candidate field contains the nameNe string exactly.
+ * Match a watchlist entry against any candidate row.
+ * Uses normalized text so punctuation/spacing variants still match.
  */
-function watchlistMatch(pol, w) {
-  return pol.nameNe && (w.candidate || '').includes(pol.nameNe);
+function watchlistMatch(pol, row) {
+  const watchRaw = pol?.nameNe || '';
+  const candRaw  = row?.candidate || '';
+  if (!watchRaw || !candRaw) return false;
+
+  const watch = normalizeNameText(watchRaw);
+  const cand  = normalizeNameText(candRaw);
+  if (!watch || !cand) return false;
+
+  const watchCompact = watch.replace(/\s+/g, '');
+  const candCompact  = cand.replace(/\s+/g, '');
+
+  return cand.includes(watch) || candCompact.includes(watchCompact);
 }
 
 function renderPoliticiansBox() {
   const grid = document.getElementById('politicians-grid');
+  const controls = document.getElementById('politicians-carousel-controls');
   if (!grid) return;
-  if (!allWinners.length) {
+  const scopedWinners = getFilteredWinners();
+  const scopedCandidates = getFilteredCandidates();
+
+  if (!scopedWinners.length && !scopedCandidates.length) {
+    grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:36px;color:#6b7280;font-size:.85rem">No politician data for selected party</div>`;
+    if (controls) {
+      controls.classList.add('hidden');
+      controls.innerHTML = '';
+    }
+    return;
+  }
+
+  if (!scopedWinners.length) {
     grid.innerHTML = `
       <div class="skeleton h-[130px]"></div>
       <div class="skeleton h-[130px]"></div>
       <div class="skeleton h-[130px]"></div>
       <div class="skeleton h-[130px]"></div>`;
+    if (controls) {
+      controls.classList.add('hidden');
+      controls.innerHTML = '';
+    }
     return;
   }
 
-  const constGroups = getConstituencyGroups();
+  const constGroups = {};
+  scopedWinners.forEach(w => {
+    const key = constKey(w);
+    if (!constGroups[key]) constGroups[key] = [];
+    constGroups[key].push(w);
+  });
+  Object.values(constGroups).forEach(arr => arr.sort((a, b) => (b.votes || 0) - (a.votes || 0)));
+
+  const scopedCandsByNo = {};
+  scopedCandidates.forEach(c => {
+    const key = constituencyKey(c);
+    if (!key) return;
+    if (!scopedCandsByNo[key]) scopedCandsByNo[key] = [];
+    scopedCandsByNo[key].push(c);
+  });
+  Object.values(scopedCandsByNo).forEach(arr => arr.sort((a, b) => (b.votes || 0) - (a.votes || 0)));
 
   /** Get the best available candidate list for a constituency:
    *  - central index (all candidates, instant) if loaded
    *  - otherwise the winners-only group */
   function bestGroup(cand) {
-    const key = String(cand.constituency_no || '');
-    if (key && constCandsByNo[key] && constCandsByNo[key].length > 0) {
+    const key = constituencyKey(cand);
+    if (key && scopedCandsByNo[key] && scopedCandsByNo[key].length > 0) {
+      return scopedCandsByNo[key];
+    }
+    if (!activePartyFilter && key && constCandsByNo[key] && constCandsByNo[key].length > 0) {
       return constCandsByNo[key];
     }
     return constGroups[constKey(cand)] || [cand];
   }
 
   let cards = [];
+  let cardsToRender = [];
 
   if (polTab === 'watchlist') {
     const seen = new Set();
-    WATCHLIST.forEach(pol => {
-      const match = allWinners.find(w => watchlistMatch(pol, w));
+    WATCHLIST.forEach((pol, idx) => {
+      const winnerMatch = scopedWinners.find(w => watchlistMatch(pol, w));
+      const centralMatch = winnerMatch ? null : scopedCandidates.find(c => watchlistMatch(pol, c));
+      const match = winnerMatch || centralMatch;
       if (match) {
         const id = match.candidateId || match.candidate;
         if (!seen.has(id)) {
           seen.add(id);
           const group  = bestGroup(match);
-          const status = (match.votes && match.votes > 0) ? 'won' : 'leading';
-          cards.push({ cand: match, group, label: pol.label, found: true, status });
+          let status = 'unknown';
+          if (winnerMatch) {
+            status = 'won';
+          } else if (typeof match.elected === 'boolean') {
+            status = match.elected ? 'won' : 'lost';
+          }
+          cards.push({ cand: match, group, label: pol.label, found: true, status, _watchOrder: idx });
         }
       } else {
-        cards.push({ cand: null, group: [], label: pol.label, found: false, status: 'unknown' });
+        cards.push({ cand: null, group: [], label: pol.label, found: false, status: 'unknown', _watchOrder: idx });
       }
     });
+
+    cards.sort((a, b) => {
+      const av = a.found ? Number(a.cand?.votes || 0) : -1;
+      const bv = b.found ? Number(b.cand?.votes || 0) : -1;
+      if (bv !== av) return bv - av;
+      return (a._watchOrder || 0) - (b._watchOrder || 0);
+    });
+
+    const totalSlides = Math.max(1, Math.ceil(cards.length / WATCHLIST_SLIDE_SIZE));
+    if (polWatchPage < 0) polWatchPage = totalSlides - 1;
+    if (polWatchPage >= totalSlides) polWatchPage = 0;
+
+    const start = polWatchPage * WATCHLIST_SLIDE_SIZE;
+    cardsToRender = cards.slice(start, start + WATCHLIST_SLIDE_SIZE);
+
+    if (controls) {
+      controls.classList.remove('hidden');
+      controls.innerHTML = `
+        <div style="display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap">
+          <button onclick="changeWatchlistPage(-1)" class="px-2.5 py-1 rounded-md border text-[0.67rem] border-bdr text-gray-400 hover:bg-dim cursor-pointer">← Prev</button>
+          <span style="font-size:.68rem;color:#6b7280">Slide ${polWatchPage + 1} / ${totalSlides}</span>
+          <button onclick="changeWatchlistPage(1)" class="px-2.5 py-1 rounded-md border text-[0.67rem] border-bdr text-gray-400 hover:bg-dim cursor-pointer">Next →</button>
+        </div>`;
+    }
   } else {
-    const sorted = [...allWinners].sort((a, b) => (b.votes || 0) - (a.votes || 0)).slice(0, 12);
+    const sorted = [...scopedWinners].sort((a, b) => (b.votes || 0) - (a.votes || 0)).slice(0, 12);
     sorted.forEach(cand => {
       const group = bestGroup(cand);
       cards.push({ cand, group, label: null, found: true, status: 'won' });
     });
+    cardsToRender = cards;
+    if (controls) {
+      controls.classList.add('hidden');
+      controls.innerHTML = '';
+    }
   }
 
   // Assign stable dom ids so we can patch individual cards
-  cards.forEach((c, i) => { c._domId = `pol-card-${i}`; });
+  cardsToRender.forEach((c, i) => { c._domId = `pol-card-${i}`; });
 
-  grid.innerHTML = cards.map(({ cand, group, label, found, status, _domId }) => {
+  grid.innerHTML = cardsToRender.map(({ cand, group, label, found, status, _domId }) => {
     const inner = found ? renderPoliticianCard(cand, group, label, status) : renderPlaceholderCard(label);
     return `<div id="${_domId}">${inner}</div>`;
   }).join('');
