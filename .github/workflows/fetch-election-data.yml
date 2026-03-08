@@ -12,11 +12,17 @@ on:
 permissions:
   contents: write   # needed to commit + push updated data files
 
+concurrency:
+  group: fetch-election-data
+  # Keep only the newest run so scheduled + manual triggers don't build stale queues.
+  # This also avoids older runs pushing outdated data after a newer run already finished.
+  cancel-in-progress: true
+
 # ── Job ───────────────────────────────────────────────────────────────────────
 jobs:
   fetch-and-commit:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
 
     steps:
       # 1. Check out the repo
@@ -40,37 +46,107 @@ jobs:
       - name: Install Python dependencies
         run: pip install -r requirements.txt
 
-      # 4. Fetch election data — script exits 0 if anything changed, 1 if no change, 2 on total failure
-      - name: Fetch election data
-        id: fetch
+      # 4. Fetch election data (run 1)
+      - name: Fetch election data (run 1)
+        id: fetch1
         run: |
+          set +e
           python scripts/fetch_election_data.py
           CODE=$?
-          if   [ $CODE -eq 0 ]; then echo "status=changed"   >> "$GITHUB_OUTPUT"
-          elif [ $CODE -eq 1 ]; then echo "status=unchanged" >> "$GITHUB_OUTPUT"
-          else                       echo "status=failed"    >> "$GITHUB_OUTPUT"
-          fi
-          # Propagate only a hard failure (exit 2) back to the runner
-          [ $CODE -ne 2 ]
+          set -e
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
 
-      # 5. Commit + push ONLY when files actually changed
-      - name: Commit updated data
-        if: steps.fetch.outputs.status == 'changed'
+      # 5. Wait before second run in the same cycle
+      - name: Wait 2 minutes
+        run: sleep 120
+
+      # 6. Fetch election data (run 2)
+      - name: Fetch election data (run 2)
+        id: fetch2
         run: |
+          set +e
+          python scripts/fetch_election_data.py
+          CODE=$?
+          set -e
+          echo "code=$CODE" >> "$GITHUB_OUTPUT"
+
+      # 7. Combine both run results
+      - name: Evaluate fetch status
+        id: fetch
+        run: |
+          CODE1="${{ steps.fetch1.outputs.code }}"
+          CODE2="${{ steps.fetch2.outputs.code }}"
+
+          echo "run1=$CODE1" >> "$GITHUB_OUTPUT"
+          echo "run2=$CODE2" >> "$GITHUB_OUTPUT"
+
+          if [ "$CODE1" = "2" ] && [ "$CODE2" = "2" ]; then
+            echo "status=failed" >> "$GITHUB_OUTPUT"
+            exit 1
+          fi
+
+          if [ "$CODE1" = "0" ] || [ "$CODE2" = "0" ]; then
+            echo "status=changed" >> "$GITHUB_OUTPUT"
+          elif [ "$CODE1" = "1" ] && [ "$CODE2" = "1" ]; then
+            echo "status=unchanged" >> "$GITHUB_OUTPUT"
+          else
+            echo "status=partial" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 8. Commit + push ONLY when files actually changed
+      - name: Commit updated data
+        if: steps.fetch.outputs.status != 'failed'
+        run: |
+          if git diff --quiet -- data/; then
+            echo "No data changes to commit."
+            exit 0
+          fi
+
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add data/
           git commit -m "data: update election results [$(date -u '+%Y-%m-%d %H:%M UTC')]"
-          git push
 
-      # 6. Human-readable summary in the Actions log
+          # Push can fail if the branch moved while this job was running.
+          # Retry after fetch+rebase to handle non-fast-forward safely.
+          BRANCH="${GITHUB_REF_NAME}"
+          REMOTE="origin"
+
+          for attempt in 1 2 3; do
+            if git push "$REMOTE" "HEAD:$BRANCH"; then
+              echo "Push succeeded on attempt $attempt"
+              exit 0
+            fi
+
+            echo "Push failed on attempt $attempt; fetching + rebasing and retrying..."
+            git fetch "$REMOTE" "$BRANCH"
+            if ! git rebase "$REMOTE/$BRANCH"; then
+              git rebase --abort || true
+              echo "Rebase conflict while syncing with $REMOTE/$BRANCH"
+              exit 1
+            fi
+
+            sleep $((attempt * 2))
+          done
+
+          echo "Push failed after 3 attempts."
+          exit 1
+
+      # 9. Human-readable summary in the Actions log
       - name: Summary
         if: always()
         run: |
           STATUS="${{ steps.fetch.outputs.status }}"
+          RUN1="${{ steps.fetch.outputs.run1 }}"
+          RUN2="${{ steps.fetch.outputs.run2 }}"
+
+          echo "- run1 exit code: ${RUN1:-n/a}" >> "$GITHUB_STEP_SUMMARY"
+          echo "- run2 exit code: ${RUN2:-n/a}" >> "$GITHUB_STEP_SUMMARY"
+
           case "$STATUS" in
             changed)   echo "### ✅ data.json updated and pushed to GitHub Pages" ;;
             unchanged) echo "### ℹ️ No changes detected — nothing to commit"        ;;
-            failed)    echo "### ❌ All fetches failed — upstream may be down"       ;;
-            *)         echo "### ⚠️ Unknown status: $STATUS"                         ;;
+            partial)   echo "### ⚠️ Partial success — one run had issues"           ;;
+            failed)    echo "### ❌ Both runs failed — upstream may be down"        ;;
+            *)         echo "### ⚠️ Unknown status: $STATUS"                        ;;
           esac >> "$GITHUB_STEP_SUMMARY"

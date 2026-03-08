@@ -34,6 +34,7 @@ import requests
 # ── Constants ────────────────────────────────────────────────────────────────
 BASE         = "https://result.election.gov.np/"
 RESULTS      = "https://result.election.gov.np/HouseOfRepresentatives"
+PR_VOTE_PAGE = "https://result.election.gov.np/PRVoteChartResult2082.aspx"
 CENTRAL_PAGE = "https://result.election.gov.np/ElectionResultCentral2082.aspx"
 HANDLER_BASE = "https://result.election.gov.np/Handlers/SecureJson.ashx?file=JSONFiles/Election2082/Common/"
 CENTRAL_URL  = (
@@ -116,6 +117,41 @@ def fetch_central(max_attempts: int = 3) -> dict | None:
     return None
 
 
+def fetch_pr_parties(max_attempts: int = 3) -> list | None:
+    """Fetch PR party votes from PRHoRPartyTop5.txt with PR page session context."""
+    filename = "PRHoRPartyTop5.txt"
+    url = HANDLER_BASE + filename
+    for attempt in range(1, max_attempts + 1):
+        try:
+            session, csrf = build_session(PR_VOTE_PAGE)
+            r = session.get(url, timeout=30, headers={
+                "X-CSRF-Token":     csrf,
+                "X-Requested-With": "XMLHttpRequest",
+                "Referer":          PR_VOTE_PAGE,
+                "Accept":           "application/json, text/javascript, */*; q=0.01",
+            })
+
+            if r.status_code != 200:
+                print(f"  [{filename}] attempt {attempt}: HTTP {r.status_code}", flush=True)
+                continue
+
+            text = r.text
+            if text.startswith(("[", "{")):
+                data = json.loads(text)
+                if isinstance(data, list):
+                    return data
+                if isinstance(data, dict):
+                    rows = data.get("rows")
+                    if isinstance(rows, list):
+                        return rows
+
+            print(f"  [{filename}] attempt {attempt}: HTML/empty response", flush=True)
+        except Exception as exc:
+            print(f"  [{filename}] attempt {attempt} exception: {exc}", flush=True)
+
+    return fetch_standard(filename, max_attempts=1)
+
+
 # ── Row mappers ───────────────────────────────────────────────────────────────
 
 _PREFIX_RE = re.compile(r"^प्रतिनिधि सभा सदस्य निर्वाचन क्षेत्र\s*", re.UNICODE)
@@ -176,7 +212,9 @@ def map_pr_party(d: dict) -> dict:
         "party": d.get("PoliticalPartyName") or d.get("PartyName") or "",
         "symbolId": d.get("SymbolID") or d.get("SymbolId"),
         "prVotes": to_int(
-            d.get("TotVote")
+            d.get("TotalVoteReceived")
+            or d.get("TotalVoteRecieved")
+            or d.get("TotVote")
             or d.get("TotalVote")
             or d.get("TotVotes")
             or d.get("VoteCount")
@@ -267,7 +305,7 @@ def main() -> None:
     raw_central = fetch_central()
 
     print("Fetching PRHoRPartyTop5.txt (party-list votes) …", flush=True)
-    raw_pr_parties = fetch_standard("PRHoRPartyTop5.txt")
+    raw_pr_parties = fetch_pr_parties()
 
     if raw_parties is None and raw_winners is None and raw_central is None and raw_pr_parties is None:
         print("✗ All fetches failed.")
@@ -348,7 +386,7 @@ def main() -> None:
         "winners":    winners,
         "candidates": candidates,
     }
-    content = json.dumps(output, ensure_ascii=False, separators=(",", ":"))
+    content = json.dumps(output, ensure_ascii=False, indent=2) + "\n"
 
     if OUT_FILE.exists():
         if sha256(OUT_FILE.read_text(encoding="utf-8")) == sha256(content):
