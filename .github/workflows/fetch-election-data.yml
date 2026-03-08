@@ -31,8 +31,8 @@ jobs:
         with:
           # Use the built-in token so the push is authenticated.
           token: ${{ secrets.GITHUB_TOKEN }}
-          # Full history keeps rebase/push-retry logic reliable when branch moves mid-run.
-          fetch-depth: 0
+          # Fetch minimal history — we only need to commit, not diff the full log.
+          fetch-depth: 1
 
       # 2. Python runtime
       - name: Set up Python
@@ -55,50 +55,6 @@ jobs:
           CODE=$?
           set -e
           echo "code=$CODE" >> "$GITHUB_OUTPUT"
-
-      # 5. Commit after run 1 when data changed
-      - name: Commit updated data (after run 1)
-        if: steps.fetch1.outputs.code != '2'
-        run: |
-          if git diff --quiet -- data/; then
-            echo "No data changes to commit after run 1."
-            exit 0
-          fi
-
-          git config user.name  "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/
-          git commit -m "data: update election results [run 1] [$(date -u '+%Y-%m-%d %H:%M UTC')]"
-
-          BRANCH="${GITHUB_REF_NAME}"
-          REMOTE="origin"
-
-          git fetch "$REMOTE" "$BRANCH"
-          if ! git rebase "$REMOTE/$BRANCH"; then
-            git rebase --abort || true
-            echo "Initial rebase conflict while syncing with $REMOTE/$BRANCH"
-            exit 1
-          fi
-
-          for attempt in 1 2 3; do
-            if git push "$REMOTE" "HEAD:$BRANCH"; then
-              echo "Push succeeded on attempt $attempt"
-              exit 0
-            fi
-
-            echo "Push failed on attempt $attempt; fetching + rebasing and retrying..."
-            git fetch "$REMOTE" "$BRANCH"
-            if ! git rebase "$REMOTE/$BRANCH"; then
-              git rebase --abort || true
-              echo "Rebase conflict while syncing with $REMOTE/$BRANCH"
-              exit 1
-            fi
-
-            sleep $((attempt * 2))
-          done
-
-          echo "Push failed after 3 attempts."
-          exit 1
 
       # 5. Wait before second run in the same cycle
       - name: Wait 2 minutes
@@ -137,8 +93,8 @@ jobs:
             echo "status=partial" >> "$GITHUB_OUTPUT"
           fi
 
-      # 8. Commit + push after run 2 ONLY when files actually changed
-      - name: Commit updated data (after run 2)
+      # 8. Commit + push ONLY when files actually changed
+      - name: Commit updated data
         if: steps.fetch.outputs.status != 'failed'
         run: |
           if git diff --quiet -- data/; then
@@ -155,14 +111,6 @@ jobs:
           # Retry after fetch+rebase to handle non-fast-forward safely.
           BRANCH="${GITHUB_REF_NAME}"
           REMOTE="origin"
-
-          # Sync once before first push attempt to reduce immediate non-fast-forward rejects.
-          git fetch "$REMOTE" "$BRANCH"
-          if ! git rebase "$REMOTE/$BRANCH"; then
-            git rebase --abort || true
-            echo "Initial rebase conflict while syncing with $REMOTE/$BRANCH"
-            exit 1
-          fi
 
           for attempt in 1 2 3; do
             if git push "$REMOTE" "HEAD:$BRANCH"; then
