@@ -9,8 +9,9 @@ read the data directly without going through a proxy.
 File
 ----
 data.json   — a single merged file containing:
-              parties[]   party seat totals (FPTP won + leading, symbolId)
-              winners[]   per-constituency elected candidates (with candidateId, symbolId)
+              parties[]    party seat totals (FPTP won + leading, symbolId, prVotes)
+              pr_parties[] full party-list vote totals (party, symbolId, prVotes)
+              winners[]    per-constituency elected candidates (with candidateId, symbolId)
               candidates[] all candidates from the central dataset (for drill-down)
 
 GitHub Pages URL

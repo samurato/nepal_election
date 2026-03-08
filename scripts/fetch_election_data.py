@@ -7,7 +7,8 @@ data.json shape
 ───────────────
 {
   "updated_at": "2026-03-08T07:00:00Z",
-  "parties":    [ { party, won, leading, total, symbolId } … ],
+  "parties":    [ { party, won, leading, total, symbolId, prVotes } … ],
+  "pr_parties": [ { party, symbolId, prVotes } … ],
   "winners":    [ { constituency_no, constituency, district, province,
                     candidate, party, votes, symbolId, candidateId } … ],
   "candidates": [ { province, district, constituency_no, candidate, gender,
@@ -118,6 +119,28 @@ def fetch_central(max_attempts: int = 3) -> dict | None:
 # ── Row mappers ───────────────────────────────────────────────────────────────
 
 _PREFIX_RE = re.compile(r"^प्रतिनिधि सभा सदस्य निर्वाचन क्षेत्र\s*", re.UNICODE)
+_DEVANAGARI_DIGITS = str.maketrans("०१२३४५६७८९", "0123456789")
+
+
+def normalize_party_key(name: str) -> str:
+    return re.sub(r"\s+", " ", (name or "").strip()).casefold()
+
+
+def to_int(value) -> int:
+    if value is None:
+        return 0
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, (int, float)):
+        return int(value)
+
+    text = str(value).translate(_DEVANAGARI_DIGITS).strip()
+    if not text:
+        return 0
+
+    text = text.replace(",", "")
+    m = re.search(r"-?\d+", text)
+    return int(m.group(0)) if m else 0
 
 
 def map_winner(d: dict) -> dict:
@@ -141,10 +164,29 @@ def map_winner(d: dict) -> dict:
 def map_party(d: dict) -> dict:
     return {
         "party":    d.get("PoliticalPartyName", ""),
-        "won":      d.get("TotWin", 0),
-        "leading":  d.get("TotLead", 0),
-        "total":    d.get("TotWinLead", 0),
-        "symbolId": d.get("SymbolID"),
+        "won":      to_int(d.get("TotWin", 0)),
+        "leading":  to_int(d.get("TotLead", 0)),
+        "total":    to_int(d.get("TotWinLead", 0)),
+        "symbolId": d.get("SymbolID") or d.get("SymbolId"),
+    }
+
+
+def map_pr_party(d: dict) -> dict:
+    return {
+        "party": d.get("PoliticalPartyName") or d.get("PartyName") or "",
+        "symbolId": d.get("SymbolID") or d.get("SymbolId"),
+        "prVotes": to_int(
+            d.get("TotVote")
+            or d.get("TotalVote")
+            or d.get("TotVotes")
+            or d.get("VoteCount")
+            or d.get("PRVote")
+            or d.get("PRVotes")
+            or d.get("PartyVote")
+            or d.get("TotalPRVote")
+            or d.get("TotPRVote")
+            or 0
+        ),
     }
 
 
@@ -224,7 +266,10 @@ def main() -> None:
     print("Fetching ElectionResultCentral2082.txt (all candidates) …", flush=True)
     raw_central = fetch_central()
 
-    if raw_parties is None and raw_winners is None and raw_central is None:
+    print("Fetching PRHoRPartyTop5.txt (party-list votes) …", flush=True)
+    raw_pr_parties = fetch_standard("PRHoRPartyTop5.txt")
+
+    if raw_parties is None and raw_winners is None and raw_central is None and raw_pr_parties is None:
         print("✗ All fetches failed.")
         sys.exit(2)
 
@@ -239,7 +284,49 @@ def main() -> None:
         [map_party(d) for d in (raw_parties if isinstance(raw_parties, list) else [])],
         key=lambda p: p["total"], reverse=True,
     )
+
+    # Build PR party votes (nationwide party-list)
+    pr_parties_raw = [
+        map_pr_party(d)
+        for d in (raw_pr_parties if isinstance(raw_pr_parties, list) else [])
+    ]
+
+    pr_votes_by_party: dict[str, int] = {}
+    pr_votes_by_symbol: dict[str, int] = {}
+
+    for row in pr_parties_raw:
+        name = normalize_party_key(row.get("party", ""))
+        votes = to_int(row.get("prVotes", 0))
+        symbol = row.get("symbolId")
+
+        if name:
+            pr_votes_by_party[name] = pr_votes_by_party.get(name, 0) + votes
+        if symbol is not None:
+            sk = str(symbol)
+            pr_votes_by_symbol[sk] = pr_votes_by_symbol.get(sk, 0) + votes
+
+    for p in parties:
+        key = normalize_party_key(p.get("party", ""))
+        sym = p.get("symbolId")
+        symbol_votes = pr_votes_by_symbol.get(str(sym), 0) if sym is not None else 0
+        p["prVotes"] = symbol_votes or pr_votes_by_party.get(key, 0)
+
+    pr_parties = sorted(
+        [
+            {
+                "party": row.get("party", ""),
+                "symbolId": row.get("symbolId"),
+                "prVotes": to_int(row.get("prVotes", 0)),
+            }
+            for row in pr_parties_raw
+            if row.get("party")
+        ],
+        key=lambda p: p["prVotes"],
+        reverse=True,
+    )
+
     print(f"  parties: {len(parties)}")
+    print(f"  pr_parties: {len(pr_parties)}")
 
     # Build candidates from jqGrid rows (envelope or plain list)
     candidates: list[dict] = []
@@ -257,6 +344,7 @@ def main() -> None:
     output = {
         "updated_at": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "parties":    parties,
+        "pr_parties": pr_parties,
         "winners":    winners,
         "candidates": candidates,
     }
@@ -269,7 +357,7 @@ def main() -> None:
 
     OUT_FILE.write_text(content, encoding="utf-8")
     kb = len(content.encode("utf-8")) / 1024
-    print(f"\n✓ data.json written ({kb:.0f} KB) — parties={len(parties)}  winners={len(winners)}  candidates={len(candidates)}")
+    print(f"\n✓ data.json written ({kb:.0f} KB) — parties={len(parties)}  pr_parties={len(pr_parties)}  winners={len(winners)}  candidates={len(candidates)}")
     sys.exit(0)
 
 
