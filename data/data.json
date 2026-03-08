@@ -1,5 +1,5 @@
 {
-  "updated_at": "2026-03-08T16:27:42Z",
+  "updated_at": "2026-03-08T16:29:57Z",
   "parties": [
     {
       "party": "राष्ट्रिय स्वतन्त्र पार्टी",
@@ -12,16 +12,16 @@
     {
       "party": "नेपाली काँग्रेस",
       "won": 17,
-      "leading": 0,
-      "total": 17,
+      "leading": 1,
+      "total": 18,
       "symbolId": 2583,
       "prVotes": 1017869
     },
     {
       "party": "नेपाल कम्युनिष्ट पार्टी (एकीकृत मार्क्सवादी लेनिनवादी)",
       "won": 8,
-      "leading": 2,
-      "total": 10,
+      "leading": 1,
+      "total": 9,
       "symbolId": 2598,
       "prVotes": 876421
     },
