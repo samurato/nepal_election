@@ -106,6 +106,42 @@
     .arch-grid { display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start; }
     @media (max-width:640px) { .arch-grid { grid-template-columns:1fr; } }
 
+    /* Constituency cards responsive grid */
+    @media (max-width: 480px) {
+      #const-breakdown-cards { grid-template-columns: repeat(1, minmax(0, 1fr)) !important; }
+      /* Make sort buttons stack vertically on very small screens */
+      #const-sort-closest, #const-sort-votes { 
+        font-size: 0.65rem !important;
+        padding: 0.5rem 0.75rem !important;
+        white-space: nowrap;
+      }
+    }
+    @media (min-width: 481px) and (max-width: 640px) {
+      #const-breakdown-cards { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    }
+    @media (min-width: 641px) and (max-width: 768px) {
+      #const-breakdown-cards { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    }
+    @media (min-width: 769px) and (max-width: 1024px) {
+      #const-breakdown-cards { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+    }
+    @media (min-width: 1025px) and (max-width: 1280px) {
+      #const-breakdown-cards { grid-template-columns: repeat(4, minmax(0, 1fr)) !important; }
+    }
+    
+    /* Mobile responsive adjustments for constituency analytics */
+    @media (max-width: 640px) {
+      /* Reduce padding on mobile */
+      .bg-card .px-4 { padding-left: 0.75rem !important; padding-right: 0.75rem !important; }
+      .bg-card .p-4 { padding: 0.75rem !important; }
+      
+      /* Carousel controls spacing */
+      #const-carousel-controls button {
+        padding: 0.4rem 0.75rem !important;
+        font-size: 0.65rem !important;
+      }
+    }
+
     /* Scrollbar */
     ::-webkit-scrollbar { width:5px;height:5px; }
     ::-webkit-scrollbar-track { background:var(--color-app); }
