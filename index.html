@@ -81,6 +81,31 @@
     .skeleton { background:var(--color-skeleton);border-radius:4px;animation:pulse-sk 1.8s ease-in-out infinite; }
     #toast { animation: popUp .25s; }
 
+    /* Confetti and sparkles animation */
+    @keyframes confetti-fall {
+      0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
+      100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+    }
+    @keyframes sparkle-fall {
+      0% { transform: translateY(0) translateX(0) scale(0) rotate(0deg); opacity: 0; }
+      10% { opacity: 1; }
+      30% { transform: translateY(30px) translateX(var(--x-offset)) scale(1.5) rotate(180deg); opacity: 1; }
+      100% { transform: translateY(var(--y-distance)) translateX(calc(var(--x-offset) * 1.5)) scale(0.5) rotate(360deg); opacity: 0; }
+    }
+    .confetti {
+      position: absolute;
+      width: 8px;
+      height: 8px;
+      z-index: 1;
+      pointer-events: none;
+    }
+    .sparkle {
+      position: absolute;
+      font-size: 16px;
+      z-index: 1;
+      pointer-events: none;
+    }
+
     /* Table — needs collapse + sticky header */
     .tbl-wrapper { overflow-x:auto;max-height:440px;overflow-y:auto; }
     table { width:100%;border-collapse:collapse;font-size:.78rem; }
@@ -255,7 +280,7 @@
     </div>
     <div>
       <h1 class="text-base font-bold tracking-tight">Lila Election Tracker</h1>
-      <p class="text-[0.65rem] text-gray-500 mt-0.5">🇳🇵 प्रतिनिधि सभा निर्वाचन २०८२ · Live FPTP Results · Auto-refreshes every 2 min</p>
+      <p class="text-[0.65rem] text-gray-500 mt-0.5">🇳🇵 प्रतिनिधि सभा निर्वाचन २०८२ · Live FPTP Results</p>
     </div>
   </div>
   <div id="header-live-controls" class="flex items-center gap-3 text-xs flex-nowrap">
@@ -263,11 +288,6 @@
       <div id="status-dot" class="w-1.5 h-1.5 rounded-full bg-amber-500 status-loading"></div>
       <span id="status-text">Connecting…</span>
     </div>
-    <div class="bg-card border border-bdr px-3 py-1 rounded-md text-gray-500">UI Refreshed <span id="last-updated" class="text-[#cdd0d6] font-semibold">—</span></div>
-    <button type="button" aria-disabled="true" class="bg-card border border-bdr px-3 py-1 rounded-md text-gray-500 text-xs cursor-default">
-      Data Refreshed <span id="data-updated-at-top" class="text-[#cdd0d6] font-semibold">—</span>
-    </button>
-    <div class="bg-card border border-bdr px-3 py-1 rounded-md text-gray-500">Next in <span id="countdown" class="text-[#cdd0d6] font-semibold">—</span></div>
     <button class="bg-card border border-bdr text-[#cdd0d6] rounded-md px-3 py-1.5 cursor-pointer hover:bg-dim transition-colors" onclick="fetchAll()">↻ Refresh Now</button>
     <button id="theme-toggle" title="Toggle light / dark mode" onclick="toggleTheme()">🌙</button>
   </div>
@@ -313,6 +333,36 @@
       <div class="text-3xl font-bold leading-none text-sky-400" id="m-fetch">0</div>
       <div class="text-[0.7rem] text-gray-500 mt-1.5">since page load</div>
     </div>
+  </div>
+
+  <!-- 2/3 Majority Celebratory Banner -->
+  <div id="two-thirds-banner" class="hidden mb-5 bg-gradient-to-r from-blue-500/20 via-cyan-500/20 to-blue-500/20 border-2 border-blue-500 rounded-lg p-5 text-center" style="position: relative; overflow: hidden;">
+    <div id="confetti-container" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none;"></div>
+    <div class="text-3xl mb-2">🎉 🎊 🎉</div>
+    <div class="text-xl font-bold text-blue-400 mb-1" id="two-thirds-party-name">—</div>
+    <div class="text-base text-cyan-300 mb-2" id="two-thirds-message">Has achieved a 2/3 majority!</div>
+    <div class="text-sm text-gray-400 mb-2">
+      <span id="two-thirds-seats" class="font-semibold text-blue-400">—</span> total seats out of 165
+    </div>
+    <div class="text-xs text-gray-500" id="two-thirds-breakdown">
+      FPTP: <span class="text-cyan-300 font-semibold" id="two-thirds-fptp">—</span> · 
+      Estimated PR: <span class="text-cyan-300 font-semibold" id="two-thirds-pr">—</span>
+      <div class="mt-1 text-[0.65rem]">(Need: 110 for 2/3 majority)</div>
+    </div>
+  </div>
+
+  <!-- Memorial Section -->
+  <div class="mb-5 bg-gradient-to-r from-gray-800/40 via-gray-700/40 to-gray-800/40 border border-gray-600 rounded-lg p-6 text-center">
+    <div class="text-2xl mb-3">🕊️</div>
+    <div class="text-base font-semibold text-gray-300 mb-2">In Remembrance</div>
+    <div class="text-sm text-gray-400 leading-relaxed max-w-2xl mx-auto">
+      Honoring all the lives lost during the GenZ revolution for democracy and justice.
+      <br>
+      To those who are no longer here to witness this journey—
+      <br>
+      your sacrifice will forever be remembered in the heart of Nepal.
+    </div>
+    <div class="text-xs text-gray-500 mt-4 italic">May their souls rest in eternal peace</div>
   </div>
 
   <!-- Party bars + Chart -->
@@ -514,7 +564,7 @@
 
 <footer class="text-center py-4 text-[0.7rem] text-gray-500 border-t border-bdr mt-2.5">
   Data source: <a href="https://result.election.gov.np/" target="_blank" class="text-blue-500 hover:underline">result.election.gov.np</a> ·
-  Election Commission of Nepal · Auto-refreshes every 2 minutes
+  Election Commission of Nepal
 </footer>
 
 <div id="toast" style="background:var(--color-toast-bg)" class="fixed bottom-6 right-6 z-[999] border border-bdr text-[#cdd0d6] rounded-md px-4 py-2.5 text-xs hidden"></div>
@@ -976,7 +1026,6 @@ async function fetchAll() {
     }
 
     fetchCount++;
-    nextAt = Date.now() + INTERVAL;
 
     updateMetrics();
     renderPartyList();
@@ -993,16 +1042,11 @@ async function fetchAll() {
     const dataUpdatedAtDate = parseDataUpdatedAt(data.updated_at);
     const isDataStale = !dataUpdatedAtDate || (Date.now() - dataUpdatedAtDate.getTime() > DATA_STALE_MS);
 
-    const topUpdatedEl = document.getElementById('data-updated-at-top');
-    if (topUpdatedEl) topUpdatedEl.textContent = topUpdated;
-
-    document.getElementById("last-updated").textContent = uiTime;
     document.getElementById("m-fetch").textContent = fetchCount;
     setStatus(isDataStale ? "stale" : "ok", isDataStale ? "Stale" : "Live");
-    showToast(`✓ UI refreshed at ${uiTime}${dataTime !== '—' ? ` · Data: ${dataTime}` : ''}`);
 
   } catch (err) {
-    setStatus("error", "Error — retrying in 2 min");
+    setStatus("error", "Error");
     showToast(`✗ ${err.message}`, true);
     console.error(err);
   } finally {
@@ -1031,6 +1075,73 @@ function updateMetrics() {
   const pct = Math.min(100, (topTotal / 83 * 100)).toFixed(1);
   document.getElementById("majority-fill").style.width = pct + "%";
   document.getElementById("majority-pct").textContent  = `${topTotal} / 83 (${pct}%)`;
+
+  // Check for 2/3 majority (110 seats out of 165)
+  const twoThirdsMajority = 110;
+  const banner = document.getElementById('two-thirds-banner');
+  const partyWithTwoThirds = partyData.find(p => p.total >= twoThirdsMajority);
+  
+  if (partyWithTwoThirds && banner) {
+    const wasHidden = banner.classList.contains('hidden');
+    banner.classList.remove('hidden');
+    document.getElementById('two-thirds-party-name').textContent = partyWithTwoThirds.party;
+    document.getElementById('two-thirds-seats').textContent = partyWithTwoThirds.total;
+    
+    // FPTP breakdown
+    const wonPart = partyWithTwoThirds.won > 0 ? `${partyWithTwoThirds.won} won` : '';
+    const leadPart = partyWithTwoThirds.leading > 0 ? `${partyWithTwoThirds.leading} leading` : '';
+    const fptpBreakdown = [wonPart, leadPart].filter(Boolean).join(' + ');
+    document.getElementById('two-thirds-message').textContent = 
+      `Has achieved a 2/3 majority! (${fptpBreakdown})`;
+    
+    // Show FPTP and PR seats
+    const fptpTotal = (partyWithTwoThirds.won || 0) + (partyWithTwoThirds.leading || 0);
+    const prSeats = partyWithTwoThirds.prSeats || 0;
+    document.getElementById('two-thirds-fptp').textContent = `${fptpTotal} (${wonPart || leadPart})`;
+    document.getElementById('two-thirds-pr').textContent = prSeats;
+    
+    // Trigger confetti animation if this is newly shown
+    if (wasHidden) {
+      createConfetti();
+    }
+  } else if (banner) {
+    banner.classList.add('hidden');
+  }
+}
+
+// Create falling confetti and sparkles animation
+function createConfetti() {
+  const container = document.getElementById('confetti-container');
+  if (!container) return;
+  
+  // Clear existing confetti
+  container.innerHTML = '';
+  
+  const colors = ['#60a5fa', '#3b82f6', '#2563eb', '#06b6d4', '#0891b2', '#22d3ee', '#67e8f9'];
+  
+  // Create sparkles cascading from top and corners throughout the box
+  for (let i = 0; i < 100; i++) {
+    const sparkle = document.createElement('div');
+    sparkle.className = 'sparkle';
+    sparkle.textContent = '✨';
+    
+    // Distribute sparkles across entire width including corners
+    sparkle.style.left = Math.random() * 100 + '%';
+    sparkle.style.top = '0';
+    
+    // Random horizontal offset for spread effect
+    const xOffset = (Math.random() - 0.5) * 150;
+    sparkle.style.setProperty('--x-offset', xOffset + 'px');
+    
+    // Random vertical distance
+    const yDistance = 100 + Math.random() * 100;
+    sparkle.style.setProperty('--y-distance', yDistance + 'px');
+    
+    sparkle.style.color = colors[Math.floor(Math.random() * colors.length)];
+    sparkle.style.animation = `sparkle-fall ${1.8 + Math.random() * 1.5}s ease-out ${Math.random() * 1}s`;
+    sparkle.style.animationIterationCount = 'infinite';
+    container.appendChild(sparkle);
+  }
 }
 
 // ════════════════════════════════════════════════════════════════════
@@ -2434,8 +2545,6 @@ function renderPoliticiansBox() {
 // ════════════════════════════════════════════════════════════════════
 //  Bootstrap
 // ════════════════════════════════════════════════════════════════════
-setInterval(fetchAll,         INTERVAL);
-setInterval(updateCountdown,  1000);
 fetchAll();   // immediate first load
 </script>
 </body>
