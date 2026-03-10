@@ -2,10 +2,10 @@ name: Fetch Election Data
 
 # ── Triggers ──────────────────────────────────────────────────────────────────
 on:
-  schedule:
-    # GitHub schedule is best-effort and may start late; we run a short internal
-    # 2-minute polling loop in each scheduled job to keep effective cadence tighter.
-    - cron: "*/12 * * * *"
+  # schedule:
+  #   # GitHub schedule is best-effort and may start late; we run a short internal
+  #   # 2-minute polling loop in each scheduled job to keep effective cadence tighter.
+  #   - cron: "*/12 * * * *"
   # Allow a manual run from the Actions tab at any time.
   workflow_dispatch:
 
