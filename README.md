@@ -16,7 +16,7 @@ https://elections.lilapath.com
 
 1. Clone the repository.
 2. Install dependencies using `pip install requests`
-3. serve with  `pyrhon -m http.server `
+3. serve with  `python -m http.server `
 
 
 ## Contributions
