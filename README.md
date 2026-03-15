@@ -1,8 +1,18 @@
-# README
+# Project Name
 
-This is the README file for the Nepal Election project.
+## Development Guide
 
-## View Here
-[View Here](https://elections.lilapath.com)
+1. Clone the repository.
+2. Install dependencies using `npm install`.
+3. Run the application using `npm start`.
 
-(Additional content of the README can be retained here, depending on the existing content)
+## Installation Instructions
+
+Follow these steps to install the application:
+1. Download or clone the repository.
+2. Ensure you have Node.js installed.
+3. Run `npm install` to install the necessary packages.
+
+## Contributions
+
+We welcome contributions! Please create a fork of the repository and submit a pull request.
