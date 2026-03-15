@@ -1,7 +1,7 @@
 # Project Name
 
 #### View here
-elections.lilapath.com
+[election dashboard]https://elections.lilapath.com
 
 ## Development Guide
 
