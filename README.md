@@ -5,6 +5,8 @@ Github actions driven static website served in github pages
 - Makeshift ETL pipeline for scraping data from Nepal electoral comission
 - github actions run the scraping and loads in data folder as new commit
 - html renders the data json file
+- Also calculates proportional representation seats based on Sainte-Laguë method. 
+Parties must pass a 3% vote threshold, and seats are calculated by dividing the total valid votes of each party by odd numbers
 - Ad free dahboard : tribute to innocent souls from genz protest in nepal
 
 
